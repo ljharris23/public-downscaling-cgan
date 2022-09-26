@@ -1,0 +1,6 @@
+# config file to store details of local environment
+# this file should be copied to local_config.yaml, and edited appropriately, before use!
+data_paths: "ECMWF"  # "ECMWF", "AOPP"; uses appropriate entries in data_paths.yaml
+gpu_mem_incr: False  # allocate GPU memory incrementally; use True at AOPP (and False at ECMWF?)
+use_gpu: True  # use GPU _if possible_ (False guarantees that it will not be used).  this is done by setting or unsetting the CUDA_VISIBLE_DEVICES environment variable
+disable_tf32: False  # whether to explicitly disable the use of TensorFloat-32 calculations when running on the GPU

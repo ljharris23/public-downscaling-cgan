@@ -1,0 +1,42 @@
+GENERAL:
+    mode: "GAN" # choices 'det' 'GAN' 'VAEGAN'
+    problem_type: "normal" # choices 'normal' 'superresolution'
+    
+MODEL:
+    architecture: "forceconv" # choices 'normal' 'forceconv'
+    padding: "reflect"  # convolution padding: 'same', 'reflect', or 'symmetric'
+        
+SETUP:
+    log_folder: "/ppdata/lucy-cGAN/logs/IFS"
+
+GENERATOR:
+    filters_gen: 128
+    noise_channels: 4 # used for GAN
+    latent_variables: 1 # used for VAEGAN
+    learning_rate_gen: 1e-5
+
+DISCRIMINATOR:
+    filters_disc: 512
+    learning_rate_disc: 1e-5
+
+TRAIN:
+    train_years: [2016, 2017, 2018] 
+    training_weights: [0.4, 0.3, 0.2, 0.1]
+    num_samples: 160000
+    steps_per_checkpoint: 3200
+    batch_size: 2  # can use 400x16 without CL, or 3200x2 with CL
+    kl_weight: 1e-8  # used for VAEGAN
+    ensemble_size: 8  # size of pred ensemble for content loss
+    CL_type: "ensmeanMSE" # type of content loss to use: 'CRPS', 'CRPS_phys', 'ensmeanMSE', 'ensmeanMSE_phys'
+    content_loss_weight: 1000.0
+
+VAL:
+    val_years: 2019 # cannot pass a list if using create_fixed_dataset
+    val_size: 8
+
+EVAL:
+    num_batches: 256
+    add_postprocessing_noise: True # flag for adding postprocessing noise in rank statistics eval
+    postprocessing_noise_factor: 1e-3 # factor for scaling postprocessing noise in rank statistics eval
+    max_pooling: True
+    avg_pooling: True

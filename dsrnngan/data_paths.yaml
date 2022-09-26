@@ -1,0 +1,44 @@
+AOPP:
+    GENERAL:
+        ERA_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/ERA5'
+        NIMROD_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
+        IFS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
+        IFS_PATH_LONG: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFSLong'
+        CONSTANTS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants'
+        CONSTANTS_PATH_OLD_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/hgj2_constants_0.01_degree.nc' #includes LSM
+        CONSTANTS_PATH_NEW_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/topo_local_0.01.nc'
+
+    ECPoint:
+        breakpoints_path: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/ecPoint/CompFiles/MapFunc/Dev/ecPoint_Rainfall/012/Vers1.0.0/BreakPointsWT.txt'
+        save_tmp_loc: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/tmp'
+        save_cdf_loc: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/ecPoint/Data/NIMROD'
+
+    TFRecords:
+        tfrecords_path: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/tfrecordsIFS20'
+
+    PREDICT:
+        det_weights_path_sr: '/ppdata/lucy-cGAN/logs/det/best_model_easy_problem/models/gen_weights-0160000.h5'
+        det_weights_path: '/ppdata/lucy-cGAN/logs/det/best_model_hard_problem/models/gen_weights-0524800.h5'
+
+
+ECMWF:
+    GENERAL:
+        ERA_PATH: '/ppdata/ERA5'
+        NIMROD_PATH: '/ppdata/NIMROD'
+        IFS_PATH: '/ppdata/IFS'
+        IFS_PATH_LONG: '/ppdata/IFSLong'
+        CONSTANTS_PATH: '/ppdata/constants'
+        CONSTANTS_PATH_OLD_ORO: '/ppdata/constants/hgj2_constants_0.01_degree.nc' #includes LSM
+        CONSTANTS_PATH_NEW_ORO: '/ppdata/constants/topo_local_0.01.nc'
+
+    ECPoint:
+        breakpoints_path: '/ppdata/ecPoint/CompFiles/MapFunc/Dev/ecPoint_Rainfall/012/Vers1.0.0/BreakPointsWT.txt'
+        save_tmp_loc: '/ppdata/tmp'
+        save_cdf_loc: '/ppdata/ecPoint/Data/NIMROD'
+
+    TFRecords:
+        tfrecords_path: '/ppdata/tfrecordsIFS20'
+
+    PREDICT:
+        det_weights_path_sr: '/ppdata/lucy-cGAN/logs/det/best_model_easy_problem/models/gen_weights-0160000.h5'
+        det_weights_path: '/ppdata/lucy-cGAN/logs/det/best_model_hard_problem/models/gen_weights-0524800.h5'
