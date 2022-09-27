@@ -8,7 +8,6 @@ from tensorflow.python.keras.utils import generic_utils
 import crps
 import data
 import msssim
-import plots
 import setupdata
 import setupmodel
 from noise import NoiseGenerator
@@ -252,31 +251,6 @@ def ensemble_ranks(*,
     return (arrays, crps_scores)
 
 
-def rank_KS(norm_ranks, num_ranks=100):
-    (h, b) = np.histogram(norm_ranks, num_ranks+1)
-    h = h / h.sum()
-    ch = np.cumsum(h)
-    cb = b[1:]
-    return abs(ch-cb).max()
-
-
-def rank_CvM(norm_ranks, num_ranks=100):
-    (h, b) = np.histogram(norm_ranks, num_ranks+1)
-    h = h / h.sum()
-    ch = np.cumsum(h)
-    cb = b[1:]
-    db = np.diff(b)
-
-    return np.sqrt(((ch-cb)**2*db).sum())
-
-
-def rank_DKL(norm_ranks, num_ranks=100):
-    (h, b) = np.histogram(norm_ranks, num_ranks+1)
-    q = h / h.sum()
-    p = 1/len(h)
-    return p*np.log(p/q).sum()
-
-
 def rank_OP(norm_ranks, num_ranks=100):
     op = np.count_nonzero(
         (norm_ranks == 0) | (norm_ranks == 1)
@@ -330,7 +304,7 @@ def rank_metrics_by_time(*,
                                           padding=padding,
                                           load_full_image=load_full_image)
 
-    log_line(log_fname, "N KS CvM DKL OP CRPS CRPS_max_4 CRPS_max_16 CRPS_max_10_no_overlap CRPS_avg_4 CRPS_avg_16 CRPS_avg_10_no_overlap mean std")
+    log_line(log_fname, "N OP CRPS CRPS_max_4 CRPS_max_16 CRPS_max_10_no_overlap CRPS_avg_4 CRPS_avg_16 CRPS_avg_10_no_overlap mean std")
 
     for model_number in model_numbers:
         gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
@@ -357,9 +331,6 @@ def rank_metrics_by_time(*,
                                              max_pooling=max_pooling,
                                              avg_pooling=avg_pooling)
         ranks, lowress, hiress = arrays
-        KS = rank_KS(ranks)
-        CvM = rank_CvM(ranks)
-        DKL = rank_DKL(ranks)
         OP = rank_OP(ranks)
         CRPS_no_pool = np.asarray(crps_scores['no_pooling']).mean()
         if max_pooling:
@@ -381,8 +352,8 @@ def rank_metrics_by_time(*,
         mean = ranks.mean()
         std = ranks.std()
 
-        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
-            model_number, KS, CvM, DKL, OP, CRPS_no_pool, CRPS_max_4, CRPS_max_16, CRPS_max_10_no_overlap,
+        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
+            model_number, OP, CRPS_no_pool, CRPS_max_4, CRPS_max_16, CRPS_max_10_no_overlap,
             CRPS_avg_4, CRPS_avg_16, CRPS_avg_10_no_overlap, mean, std))
 
         # save one directory up from model weights, in same dir as logfile
@@ -391,29 +362,6 @@ def rank_metrics_by_time(*,
         if model_number in ranks_to_save:
             fname = f"ranksnew-{val_years}-{model_number}.npz"
             np.savez_compressed(os.path.join(ranks_folder, fname), ranks=ranks, lowres=lowress, hires=hiress)
-
-
-def log_spectral_distance(img1, img2):
-    def power_spectrum_dB(img):
-        fx = np.fft.fft2(img)
-        fx = fx[:img.shape[0]//2, :img.shape[1]//2]
-        px = abs(fx)**2
-        return 10 * np.log10(px)
-
-    d = (power_spectrum_dB(img1)-power_spectrum_dB(img2))**2
-
-    d[~np.isfinite(d)] = np.nan
-    return np.sqrt(np.nanmean(d))
-
-
-def log_spectral_distance_batch(batch1, batch2):
-    lsd_batch = []
-    for i in range(batch1.shape[0]):
-        lsd = log_spectral_distance(
-                batch1[i, :, :], batch2[i, :, :]
-            )
-        lsd_batch.append(lsd)
-    return np.array(lsd_batch)
 
 
 def calculate_rapsd_rmse(truth, pred):
@@ -464,7 +412,6 @@ def image_quality(*,
     mse_all = []
     emmse_all = []
     ssim_all = []
-    lsd_all = []
     rapsd_all = []
 
     if show_progress:
@@ -514,12 +461,10 @@ def image_quality(*,
             mae = ((np.abs(truth - img_gen)).mean(axis=(1, 2)))
             mse = ((truth - img_gen)**2).mean(axis=(1, 2))
             ssim = msssim.MultiScaleSSIM(truth, img_gen, 1.0)
-            lsd = log_spectral_distance_batch(truth, img_gen)
             rapsd = rapsd_batch(truth, img_gen)
             mae_all.append(mae.flatten())
             mse_all.append(mse.flatten())
             ssim_all.append(ssim.flatten())
-            lsd_all.append(lsd.flatten())
             rapsd_all.append(rapsd.flatten())
 
             if ii == 0:
@@ -539,7 +484,6 @@ def image_quality(*,
     mse_all = np.concatenate(mse_all)
     emmse_all = np.concatenate(emmse_all)
     ssim_all = np.concatenate(ssim_all)
-    lsd_all = np.concatenate(lsd_all)
     rapsd_all = np.concatenate(rapsd_all)
 
     imgqualret = {}
@@ -547,7 +491,6 @@ def image_quality(*,
     imgqualret['mse'] = mse_all
     imgqualret['emmse'] = emmse_all
     imgqualret['ssim'] = ssim_all
-    imgqualret['lsd'] = lsd_all
     imgqualret['rapsd'] = rapsd_all
 
     return imgqualret
@@ -590,7 +533,7 @@ def quality_metrics_by_time(*,
 
     log_line(log_fname, "Samples per image: {}".format(rank_samples))
     log_line(log_fname, "Initial dates/times: {}, {}".format(batch_gen_valid.dates[0:4], batch_gen_valid.hours[0:4]))
-    log_line(log_fname, "N RMSE EMRMSE MSSSIM LSD RAPSD MAE")
+    log_line(log_fname, "N RMSE EMRMSE MSSSIM RAPSD MAE")
 
     for model_number in model_numbers:
         gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
@@ -616,50 +559,12 @@ def quality_metrics_by_time(*,
         mse = imgqualret['mse']
         emmse = imgqualret['emmse']
         ssim = imgqualret['ssim']
-        lsd = imgqualret['lsd']
         rapsd = imgqualret['rapsd']
 
-        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
+        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
             model_number,
             np.sqrt(mse.mean()),
             np.sqrt(emmse.mean()),
             ssim.mean(),
-            np.nanmean(lsd),
             np.nanmean(rapsd),
             mae.mean()))
-
-
-class GeneratorLanczos:
-    # class that can be used in place of a generator for evaluation purposes,
-    # using Lanczos filtering
-    def __init__(self, out_size):
-        self.out_size = out_size
-
-    def predict(self, *args):
-        y = np.array(args[0][0][..., :1])
-        out_shape = y.shape[:1] + self.out_size + y.shape[3:]
-        x = np.zeros(out_shape, dtype=y.dtype)
-        for i in range(x.shape[0]):
-            x[i, :, :, 0] = plots.resize_lanczos(y[i, :, :, 0],
-                                                 self.out_size)
-        return x
-
-
-class GeneratorConstantUp:
-    # class that can be used in place of a generator for evaluation purposes,
-    # using constant upsampling
-    def __init__(self, out_size):
-        self.out_size = out_size
-
-    def predict(self, *args):
-        y = args[0][0][..., :1]
-        return np.repeat(np.repeat(y, self.out_size, axis=1), self.out_size, axis=2)
-
-
-class GeneratorDeterministicPlaceholder:
-    def __init__(self, gen_det):
-        self.gen_det = gen_det
-
-    def predict(self, *args):
-        y = args[0][:2]
-        return self.gen_det.predict(y)
