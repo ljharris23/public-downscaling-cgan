@@ -3,21 +3,21 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 
-from data import load_ifs_nimrod_batch, load_hires_constants, ifs_hours
+from data import load_fcst_radar_batch, load_hires_constants, fcst_hours
 
 return_dic = True
 
 
 class DataGenerator(Sequence):
-    def __init__(self, dates, ifs_fields, batch_size, log_precip=True,
-                 shuffle=True, constants=None, hour='random', ifs_norm=True,
+    def __init__(self, dates, fcst_fields, batch_size, log_precip=True,
+                 shuffle=True, constants=None, hour='random', fcst_norm=True,
                  downsample=False, seed=9999):
         self.dates = dates
 
         if isinstance(hour, str):
             if hour == 'random':
-                self.hours = np.repeat(ifs_hours, len(self.dates))
-                self.dates = np.tile(self.dates, len(ifs_hours))
+                self.hours = np.repeat(fcst_hours, len(self.dates))
+                self.dates = np.tile(self.dates, len(fcst_hours))
             else:
                 assert False, f"Unsupported hour {hour}"
 
@@ -38,11 +38,11 @@ class DataGenerator(Sequence):
             self.shuffle_data()
 
         self.batch_size = batch_size
-        self.ifs_fields = ifs_fields
+        self.fcst_fields = fcst_fields
         self.log_precip = log_precip
         self.shuffle = shuffle
         self.hour = hour
-        self.ifs_norm = ifs_norm
+        self.fcst_norm = fcst_norm
         self.downsample = downsample
         if constants is None:
             self.constants = constants
@@ -55,11 +55,11 @@ class DataGenerator(Sequence):
         # Number of batches in dataset
         return len(self.dates) // self.batch_size
 
-    def _dataset_downsampler(self, nimrod):
-        # nimrod = tf.convert_to_tensor(nimrod,dtype=tf.float32)
-        # print(nimrod.shape)
+    def _dataset_downsampler(self, radar):
+        # radar = tf.convert_to_tensor(radar, dtype=tf.float32)
+        # print(radar.shape)
         kernel_tf = tf.constant(0.01, shape=(10, 10, 1, 1), dtype=tf.float32)
-        image = tf.nn.conv2d(nimrod, filters=kernel_tf, strides=[1, 10, 10, 1], padding='VALID',
+        image = tf.nn.conv2d(radar, filters=kernel_tf, strides=[1, 10, 10, 1], padding='VALID',
                              name='conv_debug', data_format='NHWC')
         return image
 
@@ -69,12 +69,12 @@ class DataGenerator(Sequence):
         hours_batch = self.hours[idx*self.batch_size:(idx+1)*self.batch_size]
 
         # Load and return this batch of images
-        data_x_batch, data_y_batch = load_ifs_nimrod_batch(
+        data_x_batch, data_y_batch = load_fcst_radar_batch(
             dates_batch,
-            ifs_fields=self.ifs_fields,
+            fcst_fields=self.fcst_fields,
             log_precip=self.log_precip,
             hour=hours_batch,
-            norm=self.ifs_norm)
+            norm=self.fcst_norm)
         if self.downsample:
             data_x_batch = self._dataset_downsampler(data_y_batch[..., np.newaxis])
 
