@@ -14,14 +14,14 @@ from matplotlib.colors import ListedColormap
 import benchmarks
 import data
 import read_config
-from data import all_ifs_fields, get_dates, ifs_norm
-from data_generator_ifs import DataGenerator as DataGeneratorFull
+from data import all_fcst_fields, get_dates, fcst_norm
+from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import _init_VAEGAN
 from noise import NoiseGenerator
 from plots import plot_img_log_coastlines, truncate_colourmap
 from rapsd import plot_spectrum1d, rapsd
 from setupmodel import setup_model
-from tfrecords_generator_ifs import create_fixed_dataset
+from tfrecords_generator import create_fixed_dataset
 
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 
@@ -105,12 +105,12 @@ dates = get_dates(predict_year)
 
 if problem_type == "normal":
     downsample = False
-    plot_input_title = 'IFS'
+    plot_input_title = 'Forecast'
     input_channels = 9
 elif problem_type == "superresolution":
     downsample = True
     plot_input_title = 'Downsampled'
-    input_channels = 1  # superresolution problem doesn't have all 9 IFS fields
+    input_channels = 1  # superresolution problem doesn't have all 9 input fields
     if args.include_Lanczos:
         raise Exception("Cannot include Lanczos results for downsampled problem")
 
@@ -118,13 +118,13 @@ elif problem_type == "superresolution":
 if args.predict_full_image:
     plot_label = 'large'
     data_predict = DataGeneratorFull(dates=dates,
-                                     ifs_fields=all_ifs_fields,
+                                     fcst_fields=all_fcst_fields,
                                      batch_size=batch_size,
                                      log_precip=True,
                                      shuffle=True,
                                      constants=True,
                                      hour='random',
-                                     ifs_norm=True,
+                                     fcst_norm=True,
                                      downsample=downsample)
 
 else:
@@ -150,12 +150,12 @@ gen.load_weights(weights_fn)
 
 # dataset for benchmarks
 data_benchmarks = DataGeneratorFull(dates=dates,
-                                    ifs_fields=data.all_ifs_fields,
+                                    fcst_fields=data.all_fcst_fields,
                                     batch_size=batch_size,
                                     log_precip=False,
                                     shuffle=True,
                                     hour='random',
-                                    ifs_norm=False,
+                                    fcst_norm=False,
                                     downsample=downsample)
 
 pred = []
@@ -185,8 +185,8 @@ for i in range(num_samples):
 
     if problem_type != 'superresolution':
         #  denormalise wind inputs
-        input_conditions[..., -2] = inputs['lo_res_inputs'][..., -2]*ifs_norm['u700'][1] + ifs_norm['u700'][0]
-        input_conditions[..., -1] = inputs['lo_res_inputs'][..., -1]*ifs_norm['v700'][1] + ifs_norm['v700'][0]
+        input_conditions[..., -2] = inputs['lo_res_inputs'][..., -2]*fcst_norm['u700'][1] + fcst_norm['u700'][0]
+        input_conditions[..., -1] = inputs['lo_res_inputs'][..., -1]*fcst_norm['v700'][1] + fcst_norm['v700'][0]
     seq_cond.append(input_conditions)
 
     # make sure ground truth image has correct dimensions
@@ -237,14 +237,14 @@ for i in range(num_samples):
 # len(seq) = num_predictions (iterations through data generator)
 # seq[0].shape = [NHWC], C=9 for cond, C=2 for const, C=1 for real, pred
 # list entry[0] - sample image 0
-IFS_total = seq_cond[0][0, ..., 0]  # total precip
+fcst_total = seq_cond[0][0, ..., 0]  # total precip
 if problem_type != 'superresolution':
-    IFS_conv = seq_cond[0][0, ..., 1]  # convective precip
-    IFS_u700 = seq_cond[0][0, ..., -2]  # u700
-    IFS_v700 = seq_cond[0][0, ..., -1]  # v700
+    fcst_conv = seq_cond[0][0, ..., 1]  # convective precip
+    fcst_u700 = seq_cond[0][0, ..., -2]  # u700
+    fcst_v700 = seq_cond[0][0, ..., -1]  # v700
 constant_0 = seq_const[0][0, ..., 0]  # orog
 constant_1 = seq_const[0][0, ..., 1]  # lsm
-NIMROD = seq_real[0][0, ..., 0]
+radar = seq_real[0][0, ..., 0]
 pred_0_0 = pred[0][0][0, ..., 0]  # [sample_images][pred_ensemble_size][NHWC]
 pred_mean = pred[0][:, 0, ..., 0].mean(axis=0)  # mean of ensemble members for img 0
 
@@ -264,25 +264,25 @@ ax5 = plt.subplot(gs[1, 1], projection=ccrs.PlateCarree())
 ax6 = plt.subplot(gs[1, 2], projection=ccrs.PlateCarree())
 ax = [ax1, ax2, ax3, ax4, ax5, ax6]
 
-IFS_total_ax = ax[0].imshow(IFS_total,
-                            norm=colors.LogNorm(*value_range_precip),
-                            cmap=cmap, origin='lower', extent=extent,
-                            transform=ccrs.PlateCarree(), alpha=alpha)
+fcst_total_ax = ax[0].imshow(fcst_total,
+                             norm=colors.LogNorm(*value_range_precip),
+                             cmap=cmap, origin='lower', extent=extent,
+                             transform=ccrs.PlateCarree(), alpha=alpha)
 ax[0].set_title(plot_input_title)
 ax[0].coastlines(resolution='10m', color='black', linewidth=linewidth)
-cb[2] = plt.colorbar(IFS_total_ax, ax=ax[0],
+cb[2] = plt.colorbar(fcst_total_ax, ax=ax[0],
                      norm=colors.LogNorm(*value_range_precip),
                      orientation='horizontal',
                      fraction=0.035, pad=0.04)
 
 if problem_type != 'superresolution':
-    IFS_conv_ax = ax[1].imshow(IFS_conv,
-                               norm=colors.LogNorm(*value_range_precip),
-                               cmap=cmap, origin='lower', extent=extent,
-                               transform=ccrs.PlateCarree(), alpha=alpha)
-    ax[1].set_title('IFS - convective precip')
+    fcst_conv_ax = ax[1].imshow(fcst_conv,
+                                norm=colors.LogNorm(*value_range_precip),
+                                cmap=cmap, origin='lower', extent=extent,
+                                transform=ccrs.PlateCarree(), alpha=alpha)
+    ax[1].set_title('Forecast - convective precip')
     ax[1].coastlines(resolution='10m', color='black', linewidth=linewidth)
-    cb[1] = plt.colorbar(IFS_conv_ax, ax=ax[1],
+    cb[1] = plt.colorbar(fcst_conv_ax, ax=ax[1],
                          norm=colors.LogNorm(*value_range_precip),
                          orientation='horizontal',
                          fraction=0.035, pad=0.04)
@@ -302,11 +302,11 @@ cb[0] = plt.colorbar(OROG, ax=ax[2],
                      orientation='horizontal',
                      fraction=0.04, pad=0.04)
 
-TRUTH = ax[3].imshow(NIMROD,
+TRUTH = ax[3].imshow(radar,
                      norm=colors.LogNorm(*value_range_precip),
                      cmap=cmap, origin='lower', extent=extent,
                      transform=ccrs.PlateCarree(), alpha=alpha)
-ax[3].set_title('NIMROD - ground truth')
+ax[3].set_title('Radar (ground truth)')
 ax[3].coastlines(resolution='10m', color='black', linewidth=linewidth)
 cb[3] = plt.colorbar(TRUTH, ax=ax[3],
                      norm=colors.LogNorm(*value_range_precip),
@@ -444,7 +444,7 @@ if args.plot_rapsd:
     for k in range(num_samples):
         fig, ax = plt.subplots()
         for (i, color) in zip(range(len(labels)), colours):
-            if labels[i] == 'IFS':
+            if labels[i] == 'Forecast':
                 # skip the input data b/c the resolution is different
                 pass
             else:
