@@ -28,15 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 import gc
 import os
 import pickle
-
 import numpy as np
 from scipy.ndimage.filters import uniform_filter
-
-import benchmarks
 import data
 import setupmodel
 from data import get_dates, all_ifs_fields
@@ -258,60 +254,6 @@ def plot_fss_curves(*,
         with open(fnamefull2, 'wb') as f:
             pickle.dump(method2[model_number], f)
 
-#     # do plots, one for each precip_value
-#     for pv in precip_values:
-#         plt.figure(figsize=(7, 5))
-#         lw = 1
-#         colors = ['aqua', 'darkorange', 'cornflowerblue', 'deeppink', 'navy']
-#         for modnum, color in zip(model_numbers_ec, colors):
-#             m1_scores = [method1[modnum][pv][spasc]["score"] for spasc in spatial_scales]
-#             m2_scores = [method2[modnum][pv][spasc]["score"] for spasc in spatial_scales]
-#             plt.plot(spatial_scales, m1_scores, '-', color=color, lw=lw,
-#                      label=f"{modnum} method 1")
-#             plt.plot(spatial_scales, m2_scores, ':', color=color, lw=lw,
-#                      label=f"{modnum} method 2")
-
-#         # plt.plot([0, 1], [0, 1], 'k--', lw=lw)  # no-skill
-#         # plt.xlim([0.0, 1.0])
-#         plt.ylim([0.0, 1.0])
-#         plt.xlabel('Spatial scale (km)')
-#         plt.ylabel('Fractions skill score (FSS)')
-#         plt.title(f'FSS curve for precip threshold {pv}')
-#         plt.legend(loc="best")
-#         plt.savefig("{}/FSS-{}.pdf".format(log_folder, pv), bbox_inches='tight')
-#         plt.close()
-
-
-# Probably don't use this function directly -- ATTM
-# def fss(X_f, X_o, thr, scale):
-#     """
-#     Compute the fractions skill score (FSS) for a deterministic forecast field
-#     and the corresponding observation field.
-#     Parameters
-#     ----------
-#     X_f: array_like
-#         Array of shape (m, n) containing the forecast field.
-#     X_o: array_like
-#         Array of shape (m, n) containing the observation field.
-#     thr: float
-#         The intensity threshold.
-#     scale: int
-#         The spatial scale in pixels. In practice, the scale represents the size
-#         of the moving window that it is used to compute the fraction of pixels
-#         above the threshold.
-#     Returns
-#     -------
-#     out: float
-#         The fractions skill score between 0 and 1.
-#     References
-#     ----------
-#     :cite:`RL2008`, :cite:`EWWM2013`
-#     """
-
-#     fss = fss_init(thr, scale)
-#     fss_accum(fss, X_f, X_o)
-#     return fss_compute(fss)
-
 
 def fss_init(thr, scale):
     """Initialize a fractions skill score (FSS) verification object.
@@ -350,11 +292,6 @@ def fss_accumall(fss, X_f, X_o):
         message = "X_f and X_o must be three- and two-dimensional arrays"
         message += " having the same image dimensions"
         raise ValueError(message)
-
-#     X_f = X_f.copy()
-#     X_f[~np.isfinite(X_f)] = fss["thr"] - 1
-#     X_o = X_o.copy()
-#     X_o[~np.isfinite(X_o)] = fss["thr"] - 1
 
     # Convert to binary fields with the given intensity threshold
     I_f = (X_f >= fss["thr"]).astype(np.single)
@@ -395,11 +332,6 @@ def fss_ens_accum(fss, X_f, X_o):
         message = "X_f and X_o must be three- and two-dimensional arrays"
         message += " having the same image dimensions"
         raise ValueError(message)
-
-#     X_f = X_f.copy()
-#     X_f[~np.isfinite(X_f)] = fss["thr"] - 1
-#     X_o = X_o.copy()
-#     X_o[~np.isfinite(X_o)] = fss["thr"] - 1
 
     # Convert to binary fields with the given intensity threshold
     I_f = np.mean((X_f >= fss["thr"]), axis=0, dtype=np.single)
