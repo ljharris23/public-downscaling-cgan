@@ -216,7 +216,7 @@ def load_ifs(ifield, date, hour, log_precip=False, norm=False, crop=0):
         y[y < 0] = 0.
         y = 1000*y
     if log_precip and field in ['tp', 'cp', 'pr', 'prc', 'prl']:
-        # ERA precip is measure in meters, so multiple up
+        # precip is measured in metres, so multiply up
         return np.log10(1+y)  # *1000)
     elif norm:
         return (y-ifs_norm[field][0])/ifs_norm[field][1]
