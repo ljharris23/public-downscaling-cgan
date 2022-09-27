@@ -19,7 +19,7 @@ def DataGenerator(year, batch_size, repeat=True, downsample=False, weights=None)
 
 def create_mixed_dataset(year,
                          batch_size,
-                         img_shape=(20, 20, 9),
+                         fcst_shape=(20, 20, 9),
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
                          repeat=True,
@@ -33,7 +33,7 @@ def create_mixed_dataset(year,
         weights = [1./classes]*classes
     datasets = [create_dataset(year,
                                i,
-                               img_shape=img_shape,
+                               fcst_shape=fcst_shape,
                                con_shape=con_shape,
                                out_shape=out_shape,
                                folder=folder,
@@ -95,7 +95,7 @@ def _parse_batch(record_batch,
 
 def create_dataset(year,
                    clss,
-                   img_shape=(20, 20, 9),
+                   fcst_shape=(20, 20, 9),
                    con_shape=(200, 200, 2),
                    out_shape=(200, 200, 1),
                    folder=records_folder,
@@ -115,7 +115,7 @@ def create_dataset(year,
                                  num_parallel_reads=AUTOTUNE)
     ds = ds.shuffle(shuffle_size)
     ds = ds.map(lambda x: _parse_batch(x,
-                                       insize=img_shape,
+                                       insize=fcst_shape,
                                        consize=con_shape,
                                        outsize=out_shape))
     if repeat:
@@ -128,7 +128,7 @@ def create_fixed_dataset(year=None,
                          mode='validation',
                          batch_size=16,
                          downsample=False,
-                         img_shape=(20, 20, 9),
+                         fcst_shape=(20, 20, 9),
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
                          name=None,
@@ -146,7 +146,7 @@ def create_fixed_dataset(year=None,
     ds = tf.data.TFRecordDataset(files_ds,
                                  num_parallel_reads=1)
     ds = ds.map(lambda x: _parse_batch(x,
-                                       insize=img_shape,
+                                       insize=fcst_shape,
                                        consize=con_shape,
                                        outsize=out_shape))
     ds = ds.batch(batch_size)
@@ -169,7 +169,7 @@ def write_data(year,
                log_precip=True,
                fcst_norm=True):
     from data import get_dates
-    from data_generator_fcst import DataGenerator
+    from data_generator import DataGenerator
 
     dates = get_dates(year)
 
@@ -204,26 +204,26 @@ def write_data(year,
                     idx = random.randint(0, img_size-img_chunk_width)
                     idy = random.randint(0, img_size-img_chunk_width)
 
-                    nimrod = sample[1]['output'][k,
+                    radar = sample[1]['output'][k,
                                                  idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
                                                  idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor].flatten()
                     const = sample[0]['hi_res_inputs'][k,
                                                        idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
                                                        idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor,
                                                        :].flatten()
-                    input_img = sample[0]['lo_res_inputs'][k,
+                    forecast = sample[0]['lo_res_inputs'][k,
                                                            idx:idx+img_chunk_width,
                                                            idy:idy+img_chunk_width,
                                                            :].flatten()
                     feature = {
-                        'generator_input': _float_feature(input_img),
+                        'generator_input': _float_feature(forecast),
                         'constants': _float_feature(const),
-                        'generator_output': _float_feature(nimrod)
+                        'generator_output': _float_feature(radar)
                     }
                     features = tf.train.Features(feature=feature)
                     example = tf.train.Example(features=features)
                     example_to_string = example.SerializeToString()
-                    clss = min(int(np.floor(((nimrod > 0.1).mean()*num_class))), num_class-1)  # all class binning is here!
+                    clss = min(int(np.floor(((radar > 0.1).mean()*num_class))), num_class-1)  # all class binning is here!
                     fle_hdles[clss].write(example_to_string)
         for fh in fle_hdles:
             fh.close()
