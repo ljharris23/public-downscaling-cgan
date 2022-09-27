@@ -214,7 +214,8 @@ def plot_fss_curves(*,
             else:
                 # pred_ensemble will be batch_size x ens x H x W
                 if model_number == "constupsc":
-                    pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, 0], 1)
+                    tpidx = all_ifs_fields.index('tp')
+                    pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, tpidx], 1)
                     pred_ensemble = np.repeat(np.repeat(pred_ensemble, 10, axis=-1), 10, axis=-2)
                 else:
                     raise RuntimeError('Unknown model_number {}' % model_number)
