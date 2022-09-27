@@ -1,7 +1,7 @@
 AOPP:
     GENERAL:
-        NIMROD_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
-        IFS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
+        RADAR_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
+        FORECAST_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
         CONSTANTS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants'
         CONSTANTS_PATH_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/topo_local_0.01.nc'
 
@@ -11,8 +11,8 @@ AOPP:
 
 ECMWF:
     GENERAL:
-        NIMROD_PATH: '/ppdata/NIMROD'
-        IFS_PATH: '/ppdata/IFS'
+        RADAR_PATH: '/ppdata/NIMROD'
+        FORECAST_PATH: '/ppdata/IFS'
         CONSTANTS_PATH: '/ppdata/constants'
         CONSTANTS_PATH_ORO: '/ppdata/constants/topo_local_0.01.nc'
 
