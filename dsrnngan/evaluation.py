@@ -7,7 +7,6 @@ from tensorflow.python.keras.utils import generic_utils
 
 import crps
 import data
-import msssim
 import setupdata
 import setupmodel
 from noise import NoiseGenerator
@@ -411,7 +410,6 @@ def image_quality(*,
     mae_all = []
     mse_all = []
     emmse_all = []
-    ssim_all = []
     rapsd_all = []
 
     if show_progress:
@@ -460,11 +458,9 @@ def image_quality(*,
 
             mae = ((np.abs(truth - img_gen)).mean(axis=(1, 2)))
             mse = ((truth - img_gen)**2).mean(axis=(1, 2))
-            ssim = msssim.MultiScaleSSIM(truth, img_gen, 1.0)
             rapsd = rapsd_batch(truth, img_gen)
             mae_all.append(mae.flatten())
             mse_all.append(mse.flatten())
-            ssim_all.append(ssim.flatten())
             rapsd_all.append(rapsd.flatten())
 
             if ii == 0:
@@ -483,14 +479,12 @@ def image_quality(*,
     mae_all = np.concatenate(mae_all)
     mse_all = np.concatenate(mse_all)
     emmse_all = np.concatenate(emmse_all)
-    ssim_all = np.concatenate(ssim_all)
     rapsd_all = np.concatenate(rapsd_all)
 
     imgqualret = {}
     imgqualret['mae'] = mae_all
     imgqualret['mse'] = mse_all
     imgqualret['emmse'] = emmse_all
-    imgqualret['ssim'] = ssim_all
     imgqualret['rapsd'] = rapsd_all
 
     return imgqualret
@@ -533,7 +527,7 @@ def quality_metrics_by_time(*,
 
     log_line(log_fname, "Samples per image: {}".format(rank_samples))
     log_line(log_fname, "Initial dates/times: {}, {}".format(batch_gen_valid.dates[0:4], batch_gen_valid.hours[0:4]))
-    log_line(log_fname, "N RMSE EMRMSE MSSSIM RAPSD MAE")
+    log_line(log_fname, "N RMSE EMRMSE RAPSD MAE")
 
     for model_number in model_numbers:
         gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
@@ -558,13 +552,11 @@ def quality_metrics_by_time(*,
         mae = imgqualret['mae']
         mse = imgqualret['mse']
         emmse = imgqualret['emmse']
-        ssim = imgqualret['ssim']
         rapsd = imgqualret['rapsd']
 
-        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
+        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f}".format(
             model_number,
             np.sqrt(mse.mean()),
             np.sqrt(emmse.mean()),
-            ssim.mean(),
             np.nanmean(rapsd),
             mae.mean()))
