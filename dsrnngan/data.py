@@ -9,8 +9,7 @@ data_paths = read_config.get_data_paths()
 NIMROD_PATH = data_paths["GENERAL"]["NIMROD_PATH"]
 IFS_PATH = data_paths["GENERAL"]["IFS_PATH"]
 CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
-CONSTANTS_PATH_OLD_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_OLD_ORO"]
-CONSTANTS_PATH_NEW_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_NEW_ORO"]
+CONSTANTS_PATH_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_ORO"]
 
 all_ifs_fields = ['tp', 'cp', 'sp', 'tisr', 'cape', 'tclw', 'tcwv', 'u700', 'v700']
 ifs_hours = np.array([i for i in range(5)] + [i for i in range(6, 17)] + [i for i in range(18, 24)])
@@ -59,26 +58,16 @@ def logprec(y, log_precip=True):
         return y
 
 
-def load_hires_constants(batch_size=1, crop=False,
-                         new_oro=True):
-    df = xr.load_dataset(CONSTANTS_PATH_OLD_ORO)
+def load_hires_constants(batch_size=1, crop=False):
+    df = xr.load_dataset(CONSTANTS_PATH_ORO)
     # LSM is already 0:1
-    lsm = np.array(df['LSM'])[:, ::-1, :]
-    if new_oro:
-        df = xr.load_dataset(CONSTANTS_PATH_NEW_ORO)
-        # Should rewrite this file to have increasing latitudes
-        z = df['z'].data
-        z = z[:, ::-1, :]
-        z[z < 5] = 5
-        # Normalise orography by max
-        z = z/z.max()
-    else:
-        # Should rewrite this file to have increasing latitudes
-        z = df['Z'].data
-        z = z[:, ::-1, :]
-        # z = np.array(df['Z'])[:, ::-1, :]
-        # Normalise orography by max
-        z = z/z.max()
+    lsm = np.array(df['LSM'])[:, ::-1, :]  # flip latitudes
+
+    # Orography.  Clip below, to remove spectral artifacts, and normalise by max
+    z = df['z'].data
+    z = z[:, ::-1, :]  # flip latitudes
+    z[z < 5] = 5
+    z = z/z.max()
 
     df.close()
     print(z.shape, lsm.shape)
