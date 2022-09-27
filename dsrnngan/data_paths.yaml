@@ -8,10 +8,6 @@ AOPP:
     TFRecords:
         tfrecords_path: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/tfrecordsIFS20'
 
-    PREDICT:
-        det_weights_path_sr: '/ppdata/lucy-cGAN/logs/det/best_model_easy_problem/models/gen_weights-0160000.h5'
-        det_weights_path: '/ppdata/lucy-cGAN/logs/det/best_model_hard_problem/models/gen_weights-0524800.h5'
-
 
 ECMWF:
     GENERAL:
@@ -22,7 +18,3 @@ ECMWF:
 
     TFRecords:
         tfrecords_path: '/ppdata/tfrecordsIFS20'
-
-    PREDICT:
-        det_weights_path_sr: '/ppdata/lucy-cGAN/logs/det/best_model_easy_problem/models/gen_weights-0160000.h5'
-        det_weights_path: '/ppdata/lucy-cGAN/logs/det/best_model_hard_problem/models/gen_weights-0524800.h5'
