@@ -59,22 +59,6 @@ def logprec(y, log_precip=True):
         return y
 
 
-def load_nimrod_coarse(date, hour, log_precip=False, aggregate=1):
-    nim_hr = load_nimrod(date, hour, log_precip=False, aggregate=aggregate)
-    y = coarsen_nimrod(nim_hr)
-    if log_precip:
-        return np.log10(1+y)
-    else:
-        return y
-
-
-def coarsen_nimrod(nim_hr):
-    nim_hr2 = np.pad(nim_hr, ((12,), (12,)), mode="reflect")
-    da = xr.DataArray(nim_hr2, dims=("x", "y"), coords={"x": np.arange(nim_hr2.shape[0]), "y": np.arange(nim_hr2.shape[1])})
-    da2 = da.coarsen(x=25, y=25).mean()
-    return da2.data
-
-
 def load_hires_constants(batch_size=1, crop=False,
                          new_oro=True):
     df = xr.load_dataset(CONSTANTS_PATH_OLD_ORO)
@@ -131,28 +115,6 @@ def load_ifs_nimrod_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=Fal
         batch_y.append(load_nimrod(date, h, log_precip=log_precip, crop=nim_crop))
 
     if (not constants):
-        return np.array(batch_x), np.array(batch_y)
-    else:
-        return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
-
-
-def load_nimrod_nimrod_batch(batch_dates, log_precip=False,
-                             constants=False, hour=0, aggregate=1):
-    batch_x = []
-    batch_y = []
-    if hour == 'random':
-        hours = np.random.randint(25 - aggregate, size=[len(batch_dates)])
-    elif type(hour) == int:
-        hours = len(batch_dates)*[hour]
-
-    for i, date in enumerate(batch_dates):
-        h = hours[i]
-        dta = load_nimrod(date, h, log_precip=False, aggregate=aggregate)
-        crs = coarsen_nimrod(dta)
-        batch_x.append(logprec(crs, log_precip=log_precip))
-        batch_y.append(logprec(dta, log_precip=log_precip))
-
-    if not constants:
         return np.array(batch_x), np.array(batch_y)
     else:
         return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
