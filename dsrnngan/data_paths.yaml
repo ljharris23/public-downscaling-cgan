@@ -3,7 +3,6 @@ AOPP:
         ERA_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/ERA5'
         NIMROD_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
         IFS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
-        IFS_PATH_LONG: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFSLong'
         CONSTANTS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants'
         CONSTANTS_PATH_OLD_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/hgj2_constants_0.01_degree.nc' #includes LSM
         CONSTANTS_PATH_NEW_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/topo_local_0.01.nc'
@@ -26,7 +25,6 @@ ECMWF:
         ERA_PATH: '/ppdata/ERA5'
         NIMROD_PATH: '/ppdata/NIMROD'
         IFS_PATH: '/ppdata/IFS'
-        IFS_PATH_LONG: '/ppdata/IFSLong'
         CONSTANTS_PATH: '/ppdata/constants'
         CONSTANTS_PATH_OLD_ORO: '/ppdata/constants/hgj2_constants_0.01_degree.nc' #includes LSM
         CONSTANTS_PATH_NEW_ORO: '/ppdata/constants/topo_local_0.01.nc'

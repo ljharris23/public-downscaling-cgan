@@ -15,7 +15,6 @@ data_paths = read_config.get_data_paths()
 ERA_PATH = data_paths["GENERAL"]["ERA_PATH"]
 NIMROD_PATH = data_paths["GENERAL"]["NIMROD_PATH"]
 IFS_PATH = data_paths["GENERAL"]["IFS_PATH"]
-IFS_PATH_LONG = data_paths["GENERAL"]["IFS_PATH_LONG"]
 CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
 CONSTANTS_PATH_OLD_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_OLD_ORO"]
 CONSTANTS_PATH_NEW_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_NEW_ORO"]
@@ -324,35 +323,6 @@ def load_ifs_nimrod_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=Fal
         return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
 
 
-def load_ifs_nimrod_leadtime_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=False,
-                                   constants=False, leadtime=0, norm=False,
-                                   crop=False,
-                                   nim_crop=0,
-                                   ifs_crop=0):
-    batch_x = []
-    batch_y = []
-    if crop:
-        ifs_crop = (1, -1)
-        nim_crop = (5, -6)
-
-    if type(leadtime) == str:
-        assert False, f"Not configured for {leadtime}"
-    elif np.issubdtype(type(leadtime), np.integer):
-        leadtimes = len(batch_dates)*[leadtime]
-    else:
-        leadtimes = leadtime
-
-    for i, date in enumerate(batch_dates):
-        h = leadtimes[i]
-        batch_x.append(load_ifsstack(ifs_fields, date, h, log_precip=log_precip, norm=norm, crop=ifs_crop))
-        batch_y.append(load_nimrod(date, h, log_precip=log_precip, crop=nim_crop))
-
-    if (not constants):
-        return np.array(batch_x), np.array(batch_y)
-    else:
-        return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
-
-
 def load_nimrod_nimrod_batch(batch_dates, log_precip=False,
                              constants=False, hour=0, aggregate=1):
     batch_x = []
@@ -441,70 +411,10 @@ def load_ifs(ifield, date, hour, log_precip=False, norm=False, crop=0):
         return y
 
 
-def load_ifs_leadtime(ifield, date, forecasttime, leadtime, log_precip=False, norm=False, crop=0):
-    # Get the time required (compensating for IFS saving precip at the end of the timestep)
-
-    if type(date) == str or type(date) == np.str_:
-        datestr = date
-    else:
-        datestr = date.strftime("%Y%m%d")
-    loaddata_str = datestr + '_' + forecasttime
-    assert leadtime > 0
-    time_index = leadtime
-
-    field = ifield
-    if field in ['u700', 'v700']:
-        fleheader = 'winds'
-        field = field[:1]
-    elif field in ['cdir', 'tcrw']:
-        fleheader = 'missing'
-    else:
-        fleheader = 'sfc'
-
-    ds = xr.open_dataset(f"{IFS_PATH_LONG}/{fleheader}_{loaddata_str}.nc")
-    data = ds[field]
-    field = ifield
-    if field in ['tp', 'cp', 'cdir', 'tisr']:
-        data = data[time_index, :, :] - data[time_index-1, :, :]
-    else:
-        data = data[time_index, :, :]
-
-    if crop is None or crop == 0:
-        y = np.array(data[::-1, :])
-    else:
-        y = np.array(data[::-1, :])
-        if type(crop) == tuple:
-            y = y[crop[0]:crop[1], crop[0]:crop[1]]
-        elif type(crop) == int:
-            y = y[crop:-crop, crop:-crop]
-        else:
-            assert False, "Not accepted cropping type"
-    data.close()
-    ds.close()
-    if field in ['tp', 'cp', 'pr', 'prl', 'prc']:
-        # print('pass')
-        y[y < 0] = 0.
-        y = 1000*y
-    if log_precip and field in ['tp', 'cp', 'pr', 'prc', 'prl']:
-        # ERA precip is measure in meters, so multiple up
-        return np.log10(1+y)  # *1000)
-    elif norm:
-        return (y-ifs_norm[field][0])/ifs_norm[field][1]
-    else:
-        return y
-
-
 def load_ifsstack(fields, date, hour, log_precip=False, norm=False, crop=0.):
     field_arrays = []
     for f in fields:
         field_arrays.append(load_ifs(f, date, hour, log_precip=log_precip, norm=norm, crop=crop))
-    return np.stack(field_arrays, -1)
-
-
-def load_ifsstack_leadtime(fields, date, start_hour, lead_time, log_precip=False, norm=False, crop=0.):
-    field_arrays = []
-    for f in fields:
-        field_arrays.append(load_ifs_leadtime(f, date, start_hour, lead_time, log_precip=log_precip, norm=norm, crop=crop))
     return np.stack(field_arrays, -1)
 
 
@@ -594,58 +504,6 @@ def load_ifs_norm(year=2016, tag=''):
     import pickle
     with open(f'{CONSTANTS_PATH}/IFSNorm{year}{tag}.pkl', 'rb') as f:
         return pickle.load(f)
-
-
-def get_long_data(fields, start_date, start_hour, lead_time,
-                  log_precip=False, crop=None, norm=False,
-                  nim_crop=0, ifs_crop=0):
-
-    ifslong = xr.open_dataset(f'{IFS_PATH_LONG}/sfc_{start_date}_{start_hour}.nc')
-
-    if crop:
-        ifs_crop = (1, -1)
-        nim_crop = (5, -6)
-
-    # IFS labels time by the end of the hour rather than beginning
-    time = ifslong.time[lead_time] - pd.Timedelta(hours=1)
-    # try:
-    nim = load_nimrod(time.dt.strftime('%Y%m%d').item(), time.dt.hour.item(),
-                      log_precip=log_precip, aggregate=1, crop=nim_crop)
-
-    ifs = load_ifsstack_leadtime(fields, start_date, start_hour, lead_time,
-                                 log_precip=log_precip, norm=norm, crop=ifs_crop)
-    ifslong.close()
-    return ifs, nim
-    # except:
-    #     print("Warning NIMROD, no data found")
-    #     ifslong.close()
-    #     return None,None
-
-
-def get_long_dates(year,
-                   lead_time,
-                   start_times=['00', '12']):
-    start_times = ensure_list(start_times)  # otherwise if you have start_times='00' start_hour will be '0'
-    date = datetime(year, 1, 1)
-    dt = timedelta(days=1)
-    final_date = datetime(year+1, 1, 1)
-    all_dates = []
-    all_starts = []
-    while date < final_date:
-        start_date = date.strftime('%Y%m%d')
-        for start_hour in start_times:
-            ifslong = xr.open_dataset(f'{IFS_PATH_LONG}/sfc_{start_date}_{start_hour}.nc')
-            time = ifslong.time[lead_time] - pd.Timedelta(hours=1)
-            try:
-                load_nimrod(time.dt.strftime('%Y%m%d').item(), time.dt.hour.item())
-                all_dates.append(start_date)
-                all_starts.append(start_hour)
-            except:  # noqa
-                pass
-            ifslong.close()
-        date += dt
-
-    return np.array(all_dates), np.array(all_starts)
 
 
 try:
