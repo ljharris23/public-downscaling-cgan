@@ -127,7 +127,7 @@ def ensemble_ranks(*,
     hiress = []
     crps_scores = {}
     batch_gen_iter = iter(batch_gen)
-    tpidx = data.all_ifs_fields.index('tp')
+    tpidx = data.all_fcst_fields.index('tp')
 
     if mode == "det":
         rank_samples = 1  # can't generate an ensemble deterministically
