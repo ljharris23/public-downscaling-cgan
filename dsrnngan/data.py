@@ -149,6 +149,9 @@ def gather_files_in_dir(file_dir):
 
 
 def get_dates(year):
+    """
+    Return dates where we have radar data
+    """
     from glob import glob
     files = glob(f"{NIMROD_PATH}/{year}/*.nc")
     dates = []
