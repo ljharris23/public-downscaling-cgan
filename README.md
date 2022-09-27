@@ -20,6 +20,7 @@ Use conda (even better, mamba); install everything from conda-forge
 - properscoring
 - climlab
 - iris
+
 May also require cudatoolkit
 
 # High-level data overview
@@ -31,6 +32,7 @@ You should have two main datasets:
 All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.
 
 In the paper, we also used a third, static, dataset:
+
 3. "Constant" data - orography and land-sea mask, at the same resolution as the truth data.
 
 Ideally these datasets are as 'clean' as possible.  We recommend you generate these with offline scripts that perform all regridding, cropping, interpolation, etc., so that the files can be loaded in and read directly with as little further processing as possible.  We saved these as netCDF files, which we read in using xarray.
