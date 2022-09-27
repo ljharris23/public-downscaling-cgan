@@ -7,16 +7,7 @@ import read_config
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 
 # input parameters
-# log_folder = '/ppdata/lucy-cGAN/logs/IFS/GAN/CL20fc-new-oro-xlong'; model_numbers = [563200]  # noqa
-# log_folder = '/ppdata/andrew-output/VAEGAN-xlong-100'; model_numbers = [550400]
-# log_folder = '/ppdata/lucy-cGAN/logs/det/best_model_hard_problem'; model_numbers = [524800]
-# log_folder = '/ppdata/andrew-output/GAN-equal-xlong'; model_numbers = [576000]
-# log_folder = '/ppdata/andrew-output/GAN-natural-xlong'; model_numbers = [531200]
-# log_folder = '/ppdata/andrew-output/finalGANnoCL'; model_numbers = [620800]
 log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainGAN'; model_numbers = [460800]
-# log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainVAEGAN'; model_numbers = [550400]
-# log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-GANnoCL'; model_numbers = [435200]
-
 plot_upscale = False
 predict_year = 2020
 predict_full_image = True
