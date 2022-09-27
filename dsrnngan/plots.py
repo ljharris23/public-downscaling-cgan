@@ -1,11 +1,9 @@
 import os
 import pickle
-from string import ascii_lowercase
 
 import cartopy.crs as ccrs
 import matplotlib as mpl
 import numpy as np
-import pandas as pd
 import seaborn as sns
 from matplotlib.colors import ListedColormap
 from matplotlib import pyplot as plt
@@ -15,7 +13,6 @@ import data
 from noise import NoiseGenerator
 from rapsd import plot_spectrum1d, rapsd
 from thresholded_ranks import findthresh
-# from cmcrameri import cm
 
 path = os.path.dirname(os.path.abspath(__file__))
 
@@ -122,128 +119,6 @@ def plot_sequences(gen,
     if out_fn is not None:
         plt.savefig(out_fn, bbox_inches='tight')
         plt.close()
-
-
-def plot_rank_metrics_by_samples(metrics_fn,
-                                 ax=None,
-                                 plot_metrics=["KS", "DKL", "OP", "mean"],
-                                 value_range=(-0.1, 0.2),
-                                 linestyles=['solid', 'dashed', 'dashdot', ':'],
-                                 opt_switch_point=350000,
-                                 plot_switch_text=True):
-
-    if ax is None:
-        ax = plt.gca()
-
-    df = pd.read_csv(metrics_fn, delimiter=" ")
-
-    x = df["N"]
-    for (metric, linestyle) in zip(plot_metrics, linestyles):
-        y = df[metric]
-        label = metric
-        if metric == "DKL":
-            label = "$D_\\mathrm{KL}$"
-        if metric == "OP":
-            label = "OF"
-        if metric == "mean":
-            y = y-0.5
-            label = "mean - $\\frac{1}{2}$"
-        ax.plot(x, y, label=label, linestyle=linestyle)
-
-    ax.set_xlim((0, x.max()))
-    ax.set_ylim(value_range)
-    ax.axhline(0, linestyle='--', color=(0.75, 0.75, 0.75), zorder=-10)
-    ax.axvline(opt_switch_point, linestyle='--', color=(0.75, 0.75, 0.75), zorder=-10)
-    if plot_switch_text:
-        text_x = opt_switch_point*0.98
-        text_y = value_range[1]-(value_range[1]-value_range[0])*0.02
-        ax.text(text_x, text_y, "Adam\u2192SGD", horizontalalignment='right',
-                verticalalignment='top', color=(0.5, 0.5, 0.5))
-    plt.grid(axis='y')
-
-
-def plot_rank_metrics_by_samples_multiple(metrics_files,
-                                          value_ranges=[(-0.025, 0.075),
-                                                        (-0.1, 0.2)]):
-    (fig, axes) = plt.subplots(len(metrics_files),
-                               1,
-                               sharex=True,
-                               squeeze=True)
-    plt.subplots_adjust(hspace=0.1)
-
-    for (i, (ax, fn, vr)) in enumerate(zip(axes, metrics_files, value_ranges)):
-        plot_rank_metrics_by_samples(fn,
-                                     ax,
-                                     plot_switch_text=(i == 0),
-                                     value_range=vr)
-        if i == len(metrics_files) - 1:
-            ax.legend(ncol=5)
-            ax.set_xlabel("Training sequences")
-        ax.text(0.04, 0.97, "({})".format(ascii_lowercase[i]),
-                horizontalalignment='left',
-                verticalalignment='top',
-                transform=ax.transAxes)
-        ax.set_ylabel("Rank metric")
-        ax.grid(axis='y')
-
-
-def plot_quality_metrics_by_samples(quality_metrics_fn,
-                                    rank_metrics_fn,
-                                    ax=None,
-                                    plot_metrics=["RMSE", "MSSSIM", "LSD", "CRPS"],
-                                    value_range=(0, 0.7),
-                                    linestyles=['-', '--', ':', '-.']):
-
-    if ax is None:
-        ax = plt.gca()
-
-    df = pd.read_csv(quality_metrics_fn, delimiter=" ")
-    df_r = pd.read_csv(rank_metrics_fn, delimiter=" ")
-    df["CRPS"] = df_r["CRPS"]
-
-    x = df["N"]
-    for (metric, linestyle) in zip(plot_metrics, linestyles):
-        y = df[metric]
-        label = metric
-        if metric == "MSSSIM":
-            y = 1-y
-            label = "$1 - $MS-SSIM"
-        if metric == "LSD":
-            label = "LSD [dB] / 50"
-            y = y/50
-        if metric == "CRPS":
-            y = y*10
-            label = "CRPS $\\times$ 10"
-        ax.plot(x, y, label=label, linestyle=linestyle)
-
-    ax.set_xlim((0, x.max()))
-    ax.set_ylim(value_range)
-    ax.axhline(0, linestyle='--', color=(0.75, 0.75, 0.75), zorder=-10)
-
-
-def plot_quality_metrics_by_samples_multiple(quality_metrics_files,
-                                             rank_metrics_files):
-
-    (fig, axes) = plt.subplots(len(quality_metrics_files), 1, sharex=True,
-                               squeeze=True)
-    plt.subplots_adjust(hspace=0.1)
-    value_ranges = [(0, 0.4), (0, 0.8)]
-
-    for (i, (ax, fn_q, fn_r, vr)) in enumerate(zip(axes, quality_metrics_files, rank_metrics_files, value_ranges)):
-        plot_quality_metrics_by_samples(fn_q,
-                                        fn_r,
-                                        ax,
-                                        plot_switch_text=(i == 0),
-                                        value_range=vr)
-        if i == 0:
-            ax.legend(mode='expand', ncol=4, loc='lower left')
-        if i == 1:
-            ax.set_xlabel("Training sequences")
-        ax.text(0.04, 0.97, "({})".format(ascii_lowercase[i]),
-                horizontalalignment='left', verticalalignment='top',
-                transform=ax.transAxes)
-        ax.set_ylabel("Quality metric")
-        ax.grid(axis='y')
 
 
 def plot_rank_histogram(ax, ranks, N_ranks=101, **plot_params):
