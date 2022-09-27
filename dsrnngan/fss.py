@@ -35,11 +35,11 @@ import numpy as np
 from scipy.ndimage.filters import uniform_filter
 import data
 import setupmodel
-from data import get_dates, all_ifs_fields
-from data_generator_ifs import DataGenerator as DataGeneratorFull
+from data import get_dates, all_fcst_fields
+from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import _init_VAEGAN
 from noise import NoiseGenerator
-from tfrecords_generator_ifs import create_fixed_dataset
+from tfrecords_generator import create_fixed_dataset
 
 
 def plot_fss_curves(*,
@@ -95,13 +95,13 @@ def plot_fss_curves(*,
     if predict_full_image:
         dates = get_dates(predict_year)
         data_predict = DataGeneratorFull(dates=dates,
-                                         ifs_fields=all_ifs_fields,
+                                         fcst_fields=all_fcst_fields,
                                          batch_size=batch_size,
                                          log_precip=True,
                                          shuffle=True,
                                          constants=True,
                                          hour='random',
-                                         ifs_norm=True,
+                                         fcst_norm=True,
                                          downsample=downsample)
 
     if not predict_full_image:
@@ -112,15 +112,15 @@ def plot_fss_curves(*,
     if plot_upscale:
         if not predict_full_image:
             raise RuntimeError('Data generator for benchmarks not implemented for small images')
-        # requires a different data generator with different fields and no ifs_norm
+        # requires a different data generator with different fields and no fcst_norm
         data_benchmarks = DataGeneratorFull(dates=dates,
-                                            ifs_fields=all_ifs_fields,
+                                            fcst_fields=all_fcst_fields,
                                             batch_size=batch_size,
                                             log_precip=False,
                                             shuffle=True,
                                             constants=True,
                                             hour="random",
-                                            ifs_norm=False)
+                                            fcst_norm=False)
 
     # tidier to iterate over GAN checkpoints and constupsc using joint code
     model_numbers_ec = model_numbers.copy()
@@ -208,7 +208,7 @@ def plot_fss_curves(*,
             else:
                 # pred_ensemble will be batch_size x ens x H x W
                 if model_number == "constupsc":
-                    tpidx = all_ifs_fields.index('tp')
+                    tpidx = all_fcst_fields.index('tp')
                     pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, tpidx], 1)
                     pred_ensemble = np.repeat(np.repeat(pred_ensemble, 10, axis=-1), 10, axis=-2)
                 else:
