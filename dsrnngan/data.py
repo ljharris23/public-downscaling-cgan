@@ -58,11 +58,10 @@ def logprec(y, log_precip=True):
 def load_hires_constants(batch_size=1):
     df = xr.load_dataset(CONSTANTS_PATH_ORO)
     # LSM is already 0:1
-    lsm = np.array(df['LSM'])[:, ::-1, :]  # flip latitudes
+    lsm = np.array(df['LSM'])
 
     # Orography.  Clip below, to remove spectral artifacts, and normalise by max
     z = df['z'].data
-    z = z[:, ::-1, :]  # flip latitudes
     z[z < 5] = 5
     z = z/z.max()
 
@@ -138,7 +137,7 @@ def load_fcst(ifield, date, hour, log_precip=False, norm=False):
     else:
         data = data[time_index, :, :]
 
-    y = np.array(data[::-1, :])  # flip latitudes
+    y = np.array(data[:, :])
     data.close()
     ds.close()
     if field in ['tp', 'cp', 'pr', 'prl', 'prc']:
