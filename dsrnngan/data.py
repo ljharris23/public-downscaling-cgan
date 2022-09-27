@@ -70,7 +70,7 @@ def load_hires_constants(batch_size=1, crop=False):
     z = z/z.max()
 
     df.close()
-    print(z.shape, lsm.shape)
+    # print(z.shape, lsm.shape)
     if crop:
         lsm = lsm[..., 5:-6, 5:-6]
         z = z[..., 5:-6, 5:-6]
@@ -216,6 +216,13 @@ def getifsstats(field, year=2018):
 
 
 def gen_ifs_norm(year=2018):
+
+    """
+    One-off function, used to generate normalisation constants, which are used to normalise the various input fields for training/inference.
+    
+    Depending on the field, we may subtract the mean and divide by the std. dev., or just divide by the max observed value.
+    """
+
     import pickle
     stats_dic = {}
     for f in all_ifs_fields:
@@ -226,17 +233,17 @@ def gen_ifs_norm(year=2018):
             stats_dic[f] = [0, max(-stats[0], stats[1])]
         else:
             stats_dic[f] = [0, stats[1]]
-    with open(f'{CONSTANTS_PATH}/IFSNorm{year}F.pkl', 'wb') as f:
+    with open(f'{CONSTANTS_PATH}/IFSNorm{year}.pkl', 'wb') as f:
         pickle.dump(stats_dic, f, 0)
     return
 
 
-def load_ifs_norm(year=2016, tag=''):
+def load_ifs_norm(year=2018):
     import pickle
-    with open(f'{CONSTANTS_PATH}/IFSNorm{year}{tag}.pkl', 'rb') as f:
+    with open(f'{CONSTANTS_PATH}/IFSNorm{year}.pkl', 'rb') as f:
         return pickle.load(f)
 
 try:
-    ifs_norm = load_ifs_norm(2018, tag='F')
+    ifs_norm = load_ifs_norm(2018)
 except:  # noqa
     ifs_norm = None
