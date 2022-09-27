@@ -1,6 +1,5 @@
 AOPP:
     GENERAL:
-        ERA_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/ERA5'
         NIMROD_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
         IFS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
         CONSTANTS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants'
@@ -17,7 +16,6 @@ AOPP:
 
 ECMWF:
     GENERAL:
-        ERA_PATH: '/ppdata/ERA5'
         NIMROD_PATH: '/ppdata/NIMROD'
         IFS_PATH: '/ppdata/IFS'
         CONSTANTS_PATH: '/ppdata/constants'
