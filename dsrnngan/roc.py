@@ -230,14 +230,6 @@ def calculate_roc(*,
                 y_score[method][value] = np.concatenate(y_score[method][value], axis=0)  # n_images x W x H
                 gc.collect()
 
-#         for method in pooling_methods:
-#             for value in precip_values:
-#                 # debug code for testing memory usage without generating samples
-#                 print("Generating random array", value)
-#                 y_true[method][value] = np.random.randint(0, 2, (256, 940, 940), dtype=np.bool)
-#                 y_score[method][value] = (np.random.randint(0, 101, (256, 940, 940))/100.0).astype(np.single)
-#                 gc.collect()
-
         fpr = {}; tpr = {}; rec = {}; pre = {}; baserates = {}; roc_auc = {}; pr_auc = {}  # noqa
         for method in pooling_methods:
             fpr[method] = []  # list of ROC fprs
