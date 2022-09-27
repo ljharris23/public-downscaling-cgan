@@ -16,6 +16,7 @@ records_folder = data_paths["TFRecords"]["tfrecords_path"]
 def DataGenerator(year, batch_size, repeat=True, downsample=False, weights=None):
     return create_mixed_dataset(year, batch_size, repeat=repeat, downsample=downsample, weights=weights)
 
+
 def create_mixed_dataset(year,
                          batch_size,
                          img_shape=(20, 20, 9),
@@ -211,9 +212,9 @@ def write_data(year,
                                                        idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor,
                                                        :].flatten()
                     input_img = sample[0]['lo_res_inputs'][k,
-                                                     idx:idx+img_chunk_width,
-                                                     idy:idy+img_chunk_width,
-                                                     :].flatten()
+                                                           idx:idx+img_chunk_width,
+                                                           idy:idy+img_chunk_width,
+                                                           :].flatten()
                     feature = {
                         'generator_input': _float_feature(input_img),
                         'constants': _float_feature(const),

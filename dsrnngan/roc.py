@@ -5,7 +5,6 @@ import pickle
 import numpy as np
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
-import benchmarks
 import data
 import setupmodel
 from data import all_ifs_fields, get_dates

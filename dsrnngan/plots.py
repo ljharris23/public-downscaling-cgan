@@ -271,12 +271,12 @@ def plot_rank_cdf(ax, ranks, N_ranks=101, **plot_params):
     ax.plot(bc, h, **plot_params)
 
 
-def plot_rank_histogram_all(rank_files, 
-                            labels, 
-                            log_path, 
+def plot_rank_histogram_all(rank_files,
+                            labels,
+                            log_path,
                             N_ranks=101,
-                            threshold=False, 
-                            freq=0.0001, 
+                            threshold=False,
+                            freq=0.0001,
                             lead_time=None,
                             model=None,
                             ablation=False):
@@ -313,10 +313,10 @@ def plot_rank_histogram_all(rank_files,
     ylim = axes[0].get_ylim()
     if threshold and lead_time:
         axes[0].set_ylim((0, 0.1))
-    elif lead_time: 
+    elif lead_time:
         axes[0].set_ylim((0, 0.05))
     else:
-        axes[0].set_ylim((0, ylim[1]))  
+        axes[0].set_ylim((0, ylim[1]))
     axes[0].set_xlim((0, 1))
     axes[0].text(0.01, 0.97, "(a)",
                  horizontalalignment='left',
@@ -344,7 +344,7 @@ def plot_rank_histogram_all(rank_files,
             plt.savefig("{}/rank-distribution-ablation-{}.pdf".format(log_path, freq), bbox_inches='tight')
         else:
             plt.savefig("{}/rank-distribution-ablation.pdf".format(log_path), bbox_inches='tight')
-    else:    
+    else:
         if threshold:
             plt.savefig("{}/rank-distribution-{}.pdf".format(log_path, freq), bbox_inches='tight')
         else:

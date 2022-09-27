@@ -198,7 +198,7 @@ def gen_ifs_norm(year=2018):
 
     """
     One-off function, used to generate normalisation constants, which are used to normalise the various input fields for training/inference.
-    
+
     Depending on the field, we may subtract the mean and divide by the std. dev., or just divide by the max observed value.
     """
 
@@ -221,6 +221,7 @@ def load_ifs_norm(year=2018):
     import pickle
     with open(f'{CONSTANTS_PATH}/IFSNorm{year}.pkl', 'rb') as f:
         return pickle.load(f)
+
 
 try:
     ifs_norm = load_ifs_norm(2018)
