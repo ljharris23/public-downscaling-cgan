@@ -9,7 +9,6 @@ import crps
 import data
 import msssim
 import plots
-import rainfarm
 import setupdata
 import setupmodel
 from noise import NoiseGenerator
@@ -664,29 +663,3 @@ class GeneratorDeterministicPlaceholder:
     def predict(self, *args):
         y = args[0][:2]
         return self.gen_det.predict(y)
-
-
-class GeneratorRainFARM:
-    def __init__(self, ds_factor, decoder):
-        self.ds_factor = ds_factor
-        self.decoder = decoder
-        self.batch = 0
-
-    def predict(self, *args):
-        self.batch += 1
-        y = np.array(args[0][0][..., :1])
-        P = self.decoder(y)
-        # P = 10**y
-        P[~np.isfinite(P)] = 0
-
-        out_size = (y.shape[1]*self.ds_factor, y.shape[2]*self.ds_factor)
-        out_shape = y.shape[:1] + out_size + y.shape[3:]
-        x = np.zeros(out_shape, dtype=y.dtype)
-        for i in range(y.shape[0]):
-            r = rainfarm.rainfarm_downscale(P[i, ..., 0], threshold=0.,
-                                            ds_factor=self.ds_factor)
-            log_r = np.log10(1 + r)
-            log_r[~np.isfinite(log_r)] = 0.0
-            x[i, ..., 0] = log_r
-
-        return x
