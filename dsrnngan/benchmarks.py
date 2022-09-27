@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import properscoring as ps
-
-import rainfarm
 from crps import crps_ensemble
 
 
@@ -12,34 +10,6 @@ def mse(a, b):
 
 def mae(a, b):
     return (np.abs(a-b)).mean()
-
-
-def rainfarmensemble(indata, ens_size=100):
-    ans = []
-    for i in range(ens_size):
-        ans.append(rainfarmmodel(indata))
-    return np.stack(ans, axis=-1)
-
-
-def rainfarmmodel(indata):
-    if type(indata) == dict:
-        data = indata['lo_res_inputs']
-    else:
-        data = indata
-    try:
-        if len(data.shape) == 2:
-            return rainfarm.rainfarm_downscale(data, ds_factor=10)
-        else:
-            ans = []
-            for i in range(data.shape[0]):
-                ans.append(rainfarm.rainfarm_downscale(data[i, ...], ds_factor=10))
-            return np.stack(ans, axis=0)
-    except:  # noqa
-        print(f"Largest value in input array was: {data.max()}")
-        dta_shape = data.shape
-        dta_shape[-1] = 940
-        dta_shape[-2] = 940
-        return np.zeros(dta_shape)
 
 
 def lanczosmodel(indata):

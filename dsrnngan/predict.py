@@ -3,7 +3,6 @@ import gc
 import os
 import pickle
 import yaml
-
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +11,6 @@ import seaborn as sns
 from matplotlib import colorbar, colors, gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import ListedColormap
-
 import benchmarks
 import data
 import read_config
@@ -63,7 +61,6 @@ parser.add_argument('--batch_size', type=int,
 parser.set_defaults(predict_full_image=False)
 parser.set_defaults(plot_rapsd=False)
 parser.set_defaults(include_Lanczos=False)
-parser.set_defaults(include_RainFARM=False)
 parser.set_defaults(include_deterministic=False)
 parser.add_argument('--predict_full_image', dest='predict_full_image', action='store_true',
                     help="Predict on full images")
@@ -71,8 +68,6 @@ parser.add_argument('--plot_rapsd', dest='plot_rapsd', action='store_true',
                     help="Plot Radially Averaged Power Spectral Density")
 parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
                     help="Include Lanczos benchmark")
-parser.add_argument('--include_RainFARM', dest='include_RainFARM', action='store_true',
-                    help="Include RainFARM benchmark")
 parser.add_argument('--include_deterministic', dest='include_deterministic', action='store_true',
                     help="Include deterministic model for comparison")
 args = parser.parse_args()
@@ -122,8 +117,8 @@ elif problem_type == "superresolution":
     downsample = True
     plot_input_title = 'Downsampled'
     input_channels = 1  # superresolution problem doesn't have all 9 IFS fields
-    if args.include_RainFARM or args.include_Lanczos:
-        raise Exception("Cannot include Lanczos/RainFARM results for downsampled problem")
+    if args.include_Lanczos:
+        raise Exception("Cannot include Lanczos results for downsampled problem")
 
 # load appropriate dataset
 if args.predict_full_image:
@@ -194,7 +189,6 @@ seq_real = []
 seq_cond = []
 seq_const = []
 seq_lanczos = []
-seq_rainfarm = []
 seq_det = []
 dates_save = []
 hours_save = []
@@ -266,10 +260,6 @@ for i in range(num_samples):
 data_benchmarks_iter = iter(data_benchmarks)
 for i in range(num_samples):
     inp, outp = next(data_benchmarks_iter)
-    if args.include_RainFARM:
-        seq_rainfarm.append(benchmarks.rainfarmmodel(inp['lo_res_inputs'][..., 0]))
-    else:
-        seq_rainfarm.append(dummy)
     if args.include_Lanczos:
         seq_lanczos.append(benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 0]))
     else:
@@ -405,8 +395,6 @@ plt.close()
 labels = [plot_input_title, "TRUTH"]
 for i in range(pred_ensemble_size):
     labels.append(f"{mode} pred {i+1}")
-if args.include_RainFARM:
-    labels.append("RainFARM")
 if args.include_deterministic:
     labels.append("Det CNN")
 if args.include_Lanczos:
@@ -419,7 +407,6 @@ for i in range(num_samples):
     tmp['TRUTH'] = seq_real[i][0, ..., 0]
     tmp[plot_input_title] = seq_cond[i][0, ..., 0]
     tmp['Lanczos'] = seq_lanczos[i][0, ...]
-    tmp['RainFARM'] = seq_rainfarm[i][0, ...]
     tmp['Det CNN'] = seq_det[i][0, ..., 0]
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]

@@ -1,11 +1,8 @@
 import argparse
 import gc
 import os
-
 import numpy as np
-
 import benchmarks
-import crps
 import read_config
 from data import all_ifs_fields, get_dates
 from data_generator_ifs import DataGenerator as DataGeneratorFull
@@ -26,13 +23,10 @@ parser.add_argument('--num_batches', type=int,
 parser.set_defaults(max_pooling=False)
 parser.set_defaults(avg_pooling=False)
 parser.set_defaults(include_Lanczos=False)
-parser.set_defaults(include_RainFARM=False)
 parser.set_defaults(include_constant=False)
 parser.set_defaults(include_zeros=False)
 parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
                     help="Include Lanczos benchmark")
-parser.add_argument('--include_RainFARM', dest='include_RainFARM', action='store_true',
-                    help="Include RainFARM benchmark")
 parser.add_argument('--include_constant', dest='include_constant', action='store_true',
                     help="Include constant upscaling as benchmark")
 parser.add_argument('--include_zeros', dest='include_zeros', action='store_true',
@@ -65,8 +59,6 @@ data_benchmarks = DataGeneratorFull(dates=dates,
 benchmark_methods = []
 if args.include_Lanczos:
     benchmark_methods.append('lanczos')
-if args.include_RainFARM:
-    benchmark_methods.append('rainfarm')
 if args.include_constant:
     benchmark_methods.append('constant')
 if args.include_zeros:
@@ -108,8 +100,6 @@ for benchmark in benchmark_methods:
         sample_truth = np.expand_dims(outp['output'], axis=-1)
         if benchmark == 'lanczos':
             sample_benchmark = benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 1])
-        elif benchmark == 'rainfarm':  # this has ens=100 every time
-            sample_benchmark = benchmarks.rainfarmensemble(inp['lo_res_inputs'][..., 1])
         elif benchmark == 'constant':
             sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., 1])
         elif benchmark == 'zeros':
@@ -117,79 +107,36 @@ for benchmark in benchmark_methods:
         else:
             assert False
 
-        if benchmark in ['rainfarm']:
-            # these benchmarks produce an ensemble of samples
-            for method in pooling_methods:
-                if method == 'no_pooling':
-                    sample_truth_pooled = sample_truth
-                    sample_benchmark_pooled = sample_benchmark
-                else:
-                    sample_truth_pooled = pool(sample_truth, method)
-                    sample_benchmark_pooled = pool(sample_benchmark, method)
-                sample_truth_pooled = np.squeeze(sample_truth_pooled, axis=-1)
-                crps_score = crps.crps_ensemble(sample_truth_pooled, sample_benchmark_pooled).mean()
-                del sample_truth_pooled, sample_benchmark_pooled
-                if method not in crps_scores[benchmark]:
-                    crps_scores[benchmark][method] = []
-                crps_scores[benchmark][method].append(crps_score)
-            mse_tmp = []
-            mae_tmp = []
-            rapsd_tmp = []
-            # sample_truth dims should match sample_benchmark[...,j] dims
-            sample_truth = np.squeeze(sample_truth, axis=-1)
-            for j in range(sample_benchmark.shape[-1]):
-                mse = ((sample_truth - sample_benchmark[..., j])**2).mean(axis=(1, 2))
-                mse_tmp.append(mse)
-                mae = (np.abs(sample_truth - sample_benchmark[..., j])).mean(axis=(1, 2))
-                mae_tmp.append(mae)
-                rapsd = rapsd_batch(sample_truth, sample_benchmark[..., j])
-                rapsd_tmp.append(rapsd)
-            mse_score = np.asarray(mse_tmp).mean()
-            mae_score = np.asarray(mae_tmp).mean()
-            rapsd_score = np.asarray(rapsd_tmp).mean()
-            del mse_tmp, mae_tmp, rapsd_tmp
-
-            ensmean = sample_benchmark.mean(axis=-1)
-            emmse_score = ((sample_truth - ensmean)**2).mean(axis=(1, 2))
-
-            mse_scores[benchmark].append(mse_score)
-            emmse_scores[benchmark].append(emmse_score)
-            mae_scores[benchmark].append(mae_score)
-            rapsd_scores[benchmark].append(rapsd_score)
-            gc.collect()
-
-        else:
-            # these benchmarks produce a single sample
-            sample_benchmark = np.expand_dims(sample_benchmark, axis=-1)
-            for method in pooling_methods:
-                if method == 'no_pooling':
-                    sample_truth_pooled = sample_truth
-                    sample_benchmark_pooled = sample_benchmark
-                else:
-                    sample_truth_pooled = pool(sample_truth, method)
-                    sample_benchmark_pooled = pool(sample_benchmark, method)
-                sample_truth_pooled = np.squeeze(sample_truth_pooled)
-                sample_benchmark_pooled = np.squeeze(sample_benchmark_pooled)
-
-                crps_score = benchmarks.mean_crps(sample_truth_pooled, sample_benchmark_pooled)
-                del sample_truth_pooled, sample_benchmark_pooled
-
-                if method not in crps_scores[benchmark]:
-                    crps_scores[benchmark][method] = []
-                crps_scores[benchmark][method].append(crps_score)
-                gc.collect()
-
-            mse_score = ((sample_truth - sample_benchmark)**2).mean(axis=(1, 2))
-            mae_score = np.abs(sample_truth - sample_benchmark).mean(axis=(1, 2))
-            if benchmark == 'zeros':
-                rapsd_score = np.nan
+        sample_benchmark = np.expand_dims(sample_benchmark, axis=-1)
+        for method in pooling_methods:
+            if method == 'no_pooling':
+                sample_truth_pooled = sample_truth
+                sample_benchmark_pooled = sample_benchmark
             else:
-                rapsd_score = rapsd_batch(sample_truth, sample_benchmark)
-            mse_scores[benchmark].append(mse_score)
-            emmse_scores[benchmark].append(mse_score)  # no ensemble
-            mae_scores[benchmark].append(mae_score)
-            rapsd_scores[benchmark].append(rapsd_score)
+                sample_truth_pooled = pool(sample_truth, method)
+                sample_benchmark_pooled = pool(sample_benchmark, method)
+            sample_truth_pooled = np.squeeze(sample_truth_pooled)
+            sample_benchmark_pooled = np.squeeze(sample_benchmark_pooled)
+
+            crps_score = benchmarks.mean_crps(sample_truth_pooled, sample_benchmark_pooled)
+            del sample_truth_pooled, sample_benchmark_pooled
+
+            if method not in crps_scores[benchmark]:
+                crps_scores[benchmark][method] = []
+            crps_scores[benchmark][method].append(crps_score)
             gc.collect()
+
+        mse_score = ((sample_truth - sample_benchmark)**2).mean(axis=(1, 2))
+        mae_score = np.abs(sample_truth - sample_benchmark).mean(axis=(1, 2))
+        if benchmark == 'zeros':
+            rapsd_score = np.nan
+        else:
+            rapsd_score = rapsd_batch(sample_truth, sample_benchmark)
+        mse_scores[benchmark].append(mse_score)
+        emmse_scores[benchmark].append(mse_score)  # no ensemble
+        mae_scores[benchmark].append(mae_score)
+        rapsd_scores[benchmark].append(rapsd_score)
+        gc.collect()
 
     if not args.max_pooling:
         crps_scores[benchmark]['max_4'] = np.nan
