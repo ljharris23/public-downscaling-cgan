@@ -61,15 +61,12 @@ parser.add_argument('--batch_size', type=int,
 parser.set_defaults(predict_full_image=False)
 parser.set_defaults(plot_rapsd=False)
 parser.set_defaults(include_Lanczos=False)
-parser.set_defaults(include_deterministic=False)
 parser.add_argument('--predict_full_image', dest='predict_full_image', action='store_true',
                     help="Predict on full images")
 parser.add_argument('--plot_rapsd', dest='plot_rapsd', action='store_true',
                     help="Plot Radially Averaged Power Spectral Density")
 parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
                     help="Include Lanczos benchmark")
-parser.add_argument('--include_deterministic', dest='include_deterministic', action='store_true',
-                    help="Include deterministic model for comparison")
 args = parser.parse_args()
 
 log_folder = args.log_folder
@@ -99,9 +96,6 @@ lr_gen = setup_params["GENERATOR"]["learning_rate_gen"]
 lr_gen = float(lr_gen)
 
 data_paths = read_config.get_data_paths()
-
-det_weights_path_sr = data_paths["PREDICT"]["det_weights_path_sr"]
-det_weights_path = data_paths["PREDICT"]["det_weights_path"]
 
 if args.predict_full_image:
     batch_size = 1
@@ -163,31 +157,12 @@ data_benchmarks = DataGeneratorFull(dates=dates,
                                     hour='random',
                                     ifs_norm=False,
                                     downsample=downsample)
-if args.include_deterministic:
-    if problem_type == 'superresolution':
-        filters_det = 256
-        gen_det_weights = det_weights_path_sr
-    elif problem_type == 'normal':
-        filters_det = 128
-        gen_det_weights = det_weights_path
-    model_det = setup_model(mode='det',
-                            arch=arch,
-                            input_channels=input_channels,
-                            filters_gen=filters_gen,
-                            filters_disc=filters_disc,
-                            noise_channels=None,
-                            latent_variables=None,
-                            padding=padding,
-                            lr_gen=lr_gen)
-    gen_det = model_det.gen
-    gen_det.load_weights(gen_det_weights)
 
 pred = []
 seq_real = []
 seq_cond = []
 seq_const = []
 seq_lanczos = []
-seq_det = []
 dates_save = []
 hours_save = []
 dummy = np.zeros((1, 940, 940))
@@ -220,11 +195,6 @@ for i in range(num_samples):
         seq_real.append(data.denormalise(sample))
     else:
         seq_real.append(data.denormalise(outputs['output']))
-
-    if args.include_deterministic:  # NB this is using det as a comparison
-        seq_det.append(data.denormalise(gen_det.predict(inputs)))
-    else:
-        seq_det.append(dummy)
 
     pred_ensemble = []
     if mode == 'det':  # this is plotting det as a model
@@ -393,8 +363,6 @@ plt.close()
 labels = [plot_input_title, "TRUTH"]
 for i in range(pred_ensemble_size):
     labels.append(f"{mode} pred {i+1}")
-if args.include_deterministic:
-    labels.append("Det CNN")
 if args.include_Lanczos:
     labels.append("Lanczos")
 
@@ -405,7 +373,6 @@ for i in range(num_samples):
     tmp['TRUTH'] = seq_real[i][0, ..., 0]
     tmp[plot_input_title] = seq_cond[i][0, ..., 0]
     tmp['Lanczos'] = seq_lanczos[i][0, ...]
-    tmp['Det CNN'] = seq_det[i][0, ..., 0]
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]
     for j in range(pred_ensemble_size):
