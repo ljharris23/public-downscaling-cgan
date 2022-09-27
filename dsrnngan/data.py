@@ -16,6 +16,9 @@ ifs_hours = np.array([i for i in range(5)] + [i for i in range(6, 17)] + [i for 
 
 
 def denormalise(x):
+    """
+    Undo log-transform of rainfall.  Also cap at 500 (feel free to adjust according to application!)
+    """
     return np.minimum(10**x - 1, 500.0)
 
 
@@ -31,20 +34,14 @@ def get_dates(year):
     return sorted(dates)
 
 
-def load_nimrod(date, hour, log_precip=False, aggregate=1, crop=None):
+def load_nimrod(date, hour, log_precip=False, aggregate=1):
     year = date[:4]
     data = xr.open_dataset(f"{NIMROD_PATH}/{year}/metoffice-c-band-rain-radar_uk_{date}.nc")
     assert hour+aggregate < 25
     y = np.array(data['unknown'][hour:hour+aggregate, :, :]).sum(axis=0)
     data.close()
-    # The remapping of NIMROD left a few negative numbers
-    # So remove those
-    y[y < 0] = 0
-    if crop is not None and crop != 0:
-        if type(crop) == tuple:
-            y = y[crop[0]:crop[1], crop[0]:crop[1]]
-        elif type(crop) == int:
-            y = y[crop:-crop, crop:-crop]
+    # The remapping of NIMROD left a few negative numbers, so remove those
+    y[y < 0.0] = 0.0
     if log_precip:
         return np.log10(1+y)
     else:
@@ -58,7 +55,7 @@ def logprec(y, log_precip=True):
         return y
 
 
-def load_hires_constants(batch_size=1, crop=False):
+def load_hires_constants(batch_size=1):
     df = xr.load_dataset(CONSTANTS_PATH_ORO)
     # LSM is already 0:1
     lsm = np.array(df['LSM'])[:, ::-1, :]  # flip latitudes
@@ -71,22 +68,13 @@ def load_hires_constants(batch_size=1, crop=False):
 
     df.close()
     # print(z.shape, lsm.shape)
-    if crop:
-        lsm = lsm[..., 5:-6, 5:-6]
-        z = z[..., 5:-6, 5:-6]
     return np.repeat(np.stack([z, lsm], -1), batch_size, axis=0)
 
 
 def load_ifs_nimrod_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=False,
-                          constants=False, hour=0, norm=False,
-                          crop=False,
-                          nim_crop=0,
-                          ifs_crop=0):
+                          constants=False, hour=0, norm=False):
     batch_x = []
     batch_y = []
-    if crop:
-        ifs_crop = (1, -1)
-        nim_crop = (5, -6)
 
     if type(hour) == str:
         if hour == 'random':
@@ -100,8 +88,8 @@ def load_ifs_nimrod_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=Fal
 
     for i, date in enumerate(batch_dates):
         h = hours[i]
-        batch_x.append(load_ifsstack(ifs_fields, date, h, log_precip=log_precip, norm=norm, crop=ifs_crop))
-        batch_y.append(load_nimrod(date, h, log_precip=log_precip, crop=nim_crop))
+        batch_x.append(load_ifsstack(ifs_fields, date, h, log_precip=log_precip, norm=norm))
+        batch_y.append(load_nimrod(date, h, log_precip=log_precip))
 
     if (not constants):
         return np.array(batch_x), np.array(batch_y)
@@ -109,7 +97,7 @@ def load_ifs_nimrod_batch(batch_dates, ifs_fields=all_ifs_fields, log_precip=Fal
         return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
 
 
-def load_ifs(ifield, date, hour, log_precip=False, norm=False, crop=0):
+def load_ifs(ifield, date, hour, log_precip=False, norm=False):
     # Get the time required (compensating for IFS saving precip at the end of the timestep)
     time = datetime(year=int(date[:4]), month=int(date[4:6]), day=int(date[6:8]), hour=hour) + timedelta(hours=1)
 
@@ -150,16 +138,7 @@ def load_ifs(ifield, date, hour, log_precip=False, norm=False, crop=0):
     else:
         data = data[time_index, :, :]
 
-    if crop is None or crop == 0:
-        y = np.array(data[::-1, :])
-    else:
-        y = np.array(data[::-1, :])
-        if type(crop) == tuple:
-            y = y[crop[0]:crop[1], crop[0]:crop[1]]
-        elif type(crop) == int:
-            y = y[crop:-crop, crop:-crop]
-        else:
-            assert False, "Not accepted cropping type"
+    y = np.array(data[::-1, :])  # flip latitudes
     data.close()
     ds.close()
     if field in ['tp', 'cp', 'pr', 'prl', 'prc']:
@@ -175,10 +154,10 @@ def load_ifs(ifield, date, hour, log_precip=False, norm=False, crop=0):
         return y
 
 
-def load_ifsstack(fields, date, hour, log_precip=False, norm=False, crop=0.):
+def load_ifsstack(fields, date, hour, log_precip=False, norm=False):
     field_arrays = []
     for f in fields:
-        field_arrays.append(load_ifs(f, date, hour, log_precip=log_precip, norm=norm, crop=crop))
+        field_arrays.append(load_ifs(f, date, hour, log_precip=log_precip, norm=norm))
     return np.stack(field_arrays, -1)
 
 

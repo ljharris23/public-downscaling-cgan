@@ -10,7 +10,6 @@ return_dic = True
 
 class DataGenerator(Sequence):
     def __init__(self, dates, ifs_fields, batch_size, log_precip=True,
-                 crop=False,
                  shuffle=True, constants=None, hour='random', ifs_norm=True,
                  downsample=False, seed=9999):
         self.dates = dates
@@ -44,12 +43,11 @@ class DataGenerator(Sequence):
         self.shuffle = shuffle
         self.hour = hour
         self.ifs_norm = ifs_norm
-        self.crop = crop
         self.downsample = downsample
         if constants is None:
             self.constants = constants
         elif constants is True:
-            self.constants = load_hires_constants(self.batch_size, crop=self.crop)
+            self.constants = load_hires_constants(self.batch_size)
         else:
             self.constants = np.repeat(constants, self.batch_size, axis=0)
 
@@ -76,7 +74,6 @@ class DataGenerator(Sequence):
             ifs_fields=self.ifs_fields,
             log_precip=self.log_precip,
             hour=hours_batch,
-            crop=self.crop,
             norm=self.ifs_norm)
         if self.downsample:
             data_x_batch = self._dataset_downsampler(data_y_batch[..., np.newaxis])
