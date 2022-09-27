@@ -1,4 +1,55 @@
-Running the code
+# Downscaling cGAN requirements:
+
+Use conda (even better, mamba); install everything from conda-forge
+- Python 3
+- TensorFlow 2
+    - we use v2.7; other versions should require no/minimal changes
+    - GPU strongly recommended (use a GPU-enabled TensorFlow build, compatable with the installed CUDA version)
+- matplotlib
+- seaborn
+- cartopy
+- jupyter
+- xarray
+- pandas
+- netcdf4
+- h5netcdf
+- scikit-learn
+- cfgrib
+- dask
+- tqdm
+- properscoring
+- climlab
+- iris
+May also require cudatoolkit
+
+# High-level data overview
+
+You should have two main datasets:
+1. Forecast data (low-resolution)
+2. Truth data, for example radar (high-resolution)
+
+All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.
+
+In the paper, we also used a third, static, dataset:
+3. "Constant" data - orography and land-sea mask, at the same resolution as the truth data.
+
+Ideally these datasets are as 'clean' as possible.  We recommend you generate these with offline scripts that perform all regridding, cropping, interpolation, etc., so that the files can be loaded in and read directly with as little further processing as possible.  We saved these as netCDF files, which we read in using xarray.
+
+We assume that it is possible to perform inference using full-size images, but that the images are too large to use whole during training.
+
+For this reason, part of our dataflow involves generating training data separately (small portions of the full image), and storing these in .tfrecords files.  We think this has two advantages:
+1. The training data is in an 'optimised' format; only the data needed for training is loaded in, rather than needing to open several files and extract a single timestep from each.
+2. The training data can be split into different bins, and data can be drawn from these bins in a specific ratio.  We use this to artificially increase the prevalence of rainy data.
+
+# Setting up the downscaling cGAN with your own data
+
+
+
+
+
+
+
+# Training and evaluating a network
 
 1. Training the model
 
