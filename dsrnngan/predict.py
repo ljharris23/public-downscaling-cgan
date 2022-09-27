@@ -116,7 +116,7 @@ if args.predict_full_image:
     batch_size = 1
 
 weights_fn = os.path.join(log_folder, 'models', 'gen_weights-{}.h5'.format(model_number))
-dates = get_dates(predict_year, ecmwf_file_order=True)
+dates = get_dates(predict_year)
 
 if problem_type == "normal":
     downsample = False

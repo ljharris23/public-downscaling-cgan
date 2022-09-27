@@ -41,7 +41,7 @@ def setup_full_image_dataset(years,
     from data_generator_ifs import DataGenerator as DataGeneratorFull
     from data import get_dates
 
-    dates = get_dates(years, ecmwf_file_order=True)
+    dates = get_dates(years)
     data_full = DataGeneratorFull(dates=dates,
                                   ifs_fields=all_ifs_fields,
                                   batch_size=batch_size,

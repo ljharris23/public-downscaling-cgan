@@ -98,7 +98,7 @@ def plot_fss_curves(*,
 
     # load appropriate dataset
     if predict_full_image:
-        dates = get_dates(predict_year, ecmwf_file_order=True)
+        dates = get_dates(predict_year)
         data_predict = DataGeneratorFull(dates=dates,
                                          ifs_fields=all_ifs_fields,
                                          batch_size=batch_size,

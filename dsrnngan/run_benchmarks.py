@@ -58,7 +58,7 @@ batch_size = 1  # memory issues
 log_fname = os.path.join(log_folder, "benchmarks_{}_{}_{}.txt".format(predict_year, num_batches, ensemble_members))
 
 # setup data
-dates = get_dates(predict_year, ecmwf_file_order=True)
+dates = get_dates(predict_year)
 data_benchmarks = DataGeneratorFull(dates=dates,
                                     ifs_fields=ecpoint.ifs_fields,
                                     batch_size=batch_size,
