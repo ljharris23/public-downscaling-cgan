@@ -29,11 +29,13 @@ You should have two main datasets:
 1. Forecast data (low-resolution)
 2. Truth data, for example radar (high-resolution)
 
-All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.
+All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.  In the original paper, we use 10x, but other factors are fine.  You will have to change the sizes of the `UpSampling2D` layers in `models.py`, and perhaps use more or fewer `UpSampling2D` layers.
 
 In the paper, we also used a third, static, dataset:
 
 3. "Constant" data - orography and land-sea mask, at the same resolution as the truth data.
+
+If you do not want to use similar constant data, you will need to adjust the code and model architecture slightly.
 
 Ideally these datasets are as 'clean' as possible.  We recommend you generate these with offline scripts that perform all regridding, cropping, interpolation, etc., so that the files can be loaded in and read directly with as little further processing as possible.  We saved these as netCDF files, which we read in using xarray.
 
@@ -45,11 +47,24 @@ For this reason, part of our dataflow involves generating training data separate
 
 # Setting up the downscaling cGAN with your own data
 
+Start by adjusting the paths in `data_paths.yaml` to point at your own datasets.  You can set up multiple configurations, e.g., if you are running your code on different machines that have data stored in different paths.
 
+Copy the provided `local_config-example.yaml` to `local_config.yaml` and set the options appropriately.  The file `read_config.py` controls what these options do, and you may wish to add more options of your own.
 
+The main file you will have to change is `data.py`.  The functions in there control how the forecast and "truth" (radar) data are loaded.  You will want to rewrite substantial parts of these functions, according to the data that you plan to use.  As written, these functions are centred around the radar data.  Essentially, for a particular date and time, the radar data for that time is loaded.  A corresponding forecast is found (the logic for this is in `load_fcst()`), and that data is loaded.  You may wish to flip this logic around to be more forecast-centric.
 
+A particular trap:
+- Beware the difference between instanteneous fields (use `field[hour]`) and accumulated fields (use `field[hour] - field[hour-1]`).  Naturally, beware of off-by-one errors, etc., too.
 
+These functions are ultimately called by the `DataGenerator` class in `data_generator.py`.  This class represents a dataset of full-size images, which may be used for inference, or to create training data from.
 
+At this point, you may wish to visualise the data returned by the `DataGenerator` to check that it matches what you expect!
+
+You will want to manually run the function `gen_fcst_norm` in `data.py`.  This gives certain field statistics (mean, standard dev., max, etc.) that are used for normalising inputs to the neural networks during training.  The NN performance should not be sensitive to the exact values of these, so it will be fine to run for just 1 year (among the training data years)
+
+Next, you will want to manually run the function `write_data` in `tfrecords_generator.py` for each year of training data.  This generates training data by subsampling the full-size images.  This function has various hard-coded constants, including the low-resolution image size (assumed square!  do edit the code if this is not true...), and the upscaling factor.  Make sure you adjust these to your own purpose.
+
+The training data is separated into several bins/classes, according to what proportion of the image has rainfall.  You may wish to edit how this is performed!
 
 # Training and evaluating a network
 
