@@ -8,11 +8,11 @@ from sklearn.metrics import auc, precision_recall_curve, roc_curve
 import data
 import setupmodel
 from data import all_fcst_fields, get_dates
-from data_generator_fcst import DataGenerator as DataGeneratorFull
+from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import _init_VAEGAN
 from noise import NoiseGenerator
 from pooling import pool
-from tfrecords_generator_fcst import create_fixed_dataset
+from tfrecords_generator import create_fixed_dataset
 
 
 def calculate_roc(*,

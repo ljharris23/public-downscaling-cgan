@@ -1,7 +1,7 @@
 import gc
 
-import tfrecords_generator_fcst
-from tfrecords_generator_fcst import DataGenerator
+import tfrecords_generator
+from tfrecords_generator import DataGenerator
 
 from data import all_fcst_fields
 
@@ -14,7 +14,7 @@ def setup_batch_gen(train_years,
                     weights=None,
                     val_fixed=True):
 
-    tfrecords_generator_fcst.return_dic = False
+    tfrecords_generator.return_dic = False
     print(f"downsample flag is {downsample}")
     train = None if train_years is None \
         else DataGenerator(train_years,
@@ -25,12 +25,12 @@ def setup_batch_gen(train_years,
     # create_fixed_dataset will not take a list
     if val_size is not None:
         # assume that val_size is small enough that we can just use one batch
-        val = tfrecords_generator_fcst.create_fixed_dataset(val_years, batch_size=val_size, downsample=downsample)
+        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=val_size, downsample=downsample)
         val = val.take(1)
         if val_fixed:
             val = val.cache()
     else:
-        val = tfrecords_generator_fcst.create_fixed_dataset(val_years, batch_size=batch_size, downsample=downsample)
+        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=batch_size, downsample=downsample)
     return train, val
 
 
@@ -38,7 +38,7 @@ def setup_full_image_dataset(years,
                              batch_size=1,
                              downsample=False):
 
-    from data_generator_fcst import DataGenerator as DataGeneratorFull
+    from data_generator import DataGenerator as DataGeneratorFull
     from data import get_dates
 
     dates = get_dates(years)

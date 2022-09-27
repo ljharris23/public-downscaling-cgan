@@ -5,7 +5,7 @@ import numpy as np
 import benchmarks
 import read_config
 from data import all_fcst_fields, get_dates
-from data_generator_fcst import DataGenerator as DataGeneratorFull
+from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import rapsd_batch, log_line
 from pooling import pool
 
