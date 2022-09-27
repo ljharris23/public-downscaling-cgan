@@ -4,8 +4,8 @@ import os
 import numpy as np
 import benchmarks
 import read_config
-from data import all_ifs_fields, get_dates
-from data_generator_ifs import DataGenerator as DataGeneratorFull
+from data import all_fcst_fields, get_dates
+from data_generator_fcst import DataGenerator as DataGeneratorFull
 from evaluation import rapsd_batch, log_line
 from pooling import pool
 
@@ -47,13 +47,13 @@ log_fname = os.path.join(log_folder, "benchmarks_{}_{}_{}.txt".format(predict_ye
 # setup data
 dates = get_dates(predict_year)
 data_benchmarks = DataGeneratorFull(dates=dates,
-                                    ifs_fields=all_ifs_fields,
+                                    fcst_fields=all_fcst_fields,
                                     batch_size=batch_size,
                                     log_precip=False,
                                     shuffle=True,
                                     constants=True,
                                     hour='random',
-                                    ifs_norm=False)
+                                    fcst_norm=False)
 
 benchmark_methods = []
 if args.include_Lanczos:
