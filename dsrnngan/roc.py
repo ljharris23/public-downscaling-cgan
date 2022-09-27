@@ -7,7 +7,6 @@ from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 import benchmarks
 import data
-import ecpoint
 import setupmodel
 from data import all_ifs_fields, get_dates
 from data_generator_ifs import DataGenerator as DataGeneratorFull
@@ -32,8 +31,7 @@ def calculate_roc(*,
                   predict_year,
                   predict_full_image,
                   ensemble_members=100,
-                  calc_ecpoint_all=False,
-                  calc_ecpoint_partcorr=True):
+                  calc_upscale=True):
 
     if problem_type == "normal":
         downsample = False
@@ -88,12 +86,12 @@ def calculate_roc(*,
                                             batch_size=batch_size,
                                             downsample=downsample)
 
-    if calc_ecpoint_all or calc_ecpoint_partcorr:
+    if calc_upscale:
         if not predict_full_image:
             raise RuntimeError('Data generator for benchmarks not implemented for small images')
         # requires a different data generator with different fields and no ifs_norm
         data_benchmarks = DataGeneratorFull(dates=dates,
-                                            ifs_fields=ecpoint.ifs_fields,
+                                            ifs_fields=all_ifs_fields,
                                             batch_size=batch_size,
                                             log_precip=False,
                                             crop=True,
@@ -108,17 +106,15 @@ def calculate_roc(*,
         auc_scores_roc[method] = []
         auc_scores_pr[method] = []
 
-    # tidier to iterate over GAN checkpoints and ecPoint using joint code
+    # tidier to iterate over GAN checkpoints and upscale using joint code
     model_numbers_ec = model_numbers.copy()
-    if calc_ecpoint_all:
-        model_numbers_ec.extend(["ecPoint-nocorr", "ecPoint-partcorr", "ecPoint-fullcorr", "ecPoint-mean", "constupsc"])
-    elif calc_ecpoint_partcorr:
-        model_numbers_ec.extend(["ecPoint-partcorr", "constupsc"])
+    if calc_upscale:
+        model_numbers_ec.extend(["constupsc"])
 
     for model_number in model_numbers_ec:
         print(f"calculating for model number {model_number}")
         if model_number in model_numbers:
-            # only load weights for GAN, not ecPoint
+            # only load weights for GAN, not upscale
             gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
             if not os.path.isfile(gen_weights_file):
                 print(gen_weights_file, "not found, skipping")
@@ -140,13 +136,13 @@ def calculate_roc(*,
         if model_number in model_numbers:
             data_pred_iter = iter(data_predict)  # "restarts" GAN data iterator
         else:
-            data_benchmarks_iter = iter(data_benchmarks)  # ecPoint data iterator
+            data_benchmarks_iter = iter(data_benchmarks)  # benchmarks data iterator
 
         for ii in range(num_batches):
             print(ii, num_batches)
 
             if model_number in model_numbers:
-                # GAN, not ecPoint
+                # GAN, not upscale
                 inputs, outputs = next(data_pred_iter)
                 # need to denormalise
                 if predict_full_image:
@@ -154,7 +150,7 @@ def calculate_roc(*,
                 else:
                     im_real = (data.denormalise(outputs['output'])[..., 0]).astype(np.single)
             else:
-                # ecPoint, no need to denormalise
+                # upscale, no need to denormalise
                 inputs, outputs = next(data_benchmarks_iter)
                 im_real = outputs['output'].astype(np.single)  # shape: batch_size x H x W
 
@@ -190,24 +186,8 @@ def calculate_roc(*,
                 gc.collect()
             else:
                 # pred_ensemble will be batch_size x ens x H x W
-                if model_number == "ecPoint-nocorr":
-                    pred_ensemble = benchmarks.ecpointmodel(inputs['lo_res_inputs'],
-                                                            data_format="channels_first")
-                elif model_number == "ecPoint-partcorr":
-                    pred_ensemble = benchmarks.ecpointboxensmodel(inputs['lo_res_inputs'],
-                                                                  data_format="channels_first")
-                elif model_number == "ecPoint-fullcorr":
-                    # this has ens=100 every time
-                    pred_ensemble = benchmarks.ecpointPDFmodel(inputs['lo_res_inputs'],
-                                                               data_format="channels_first")
-                elif model_number == "ecPoint-mean":
-                    # this has ens=100 every time
-                    pred_ensemble = benchmarks.ecpointPDFmodel(inputs['lo_res_inputs'],
-                                                               data_format="channels_first")
-                    pred_ensemble = np.mean(pred_ensemble, axis=1)
-                    pred_ensemble = np.expand_dims(pred_ensemble, 1)  # batch_size x 1 x H x W
-                elif model_number == "constupsc":
-                    pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, 1], 1)
+                if model_number == "constupsc":
+                    pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, 0], 1)
                     pred_ensemble = np.repeat(np.repeat(pred_ensemble, 10, axis=-1), 10, axis=-2)
                 else:
                     raise RuntimeError('Unknown model_number {}' % model_number)
@@ -294,7 +274,7 @@ def calculate_roc(*,
                 gc.collect()
 
             if model_number in model_numbers:
-                # i.e., don't do this for ecPoint
+                # i.e., don't do this for upscale
                 auc_scores_roc[method].append(np.array(roc_auc[method]))
                 auc_scores_pr[method].append(np.array(pr_auc[method]))
 

@@ -17,7 +17,7 @@ log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/r
 # log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainVAEGAN'; model_numbers = [550400]
 # log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-GANnoCL'; model_numbers = [435200]
 
-plot_ecpoint = False  # False
+plot_upscale = False
 predict_year = 2020
 predict_full_image = True
 ensemble_members = 100
@@ -53,4 +53,4 @@ fss.plot_fss_curves(mode=mode,
                     predict_year=predict_year,
                     predict_full_image=predict_full_image,
                     ensemble_members=ensemble_members,
-                    plot_ecpoint=plot_ecpoint)
+                    plot_upscale=plot_upscale)

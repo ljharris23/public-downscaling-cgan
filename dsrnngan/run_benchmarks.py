@@ -6,9 +6,8 @@ import numpy as np
 
 import benchmarks
 import crps
-import ecpoint
 import read_config
-from data import get_dates
+from data import all_ifs_fields, get_dates
 from data_generator_ifs import DataGenerator as DataGeneratorFull
 from evaluation import rapsd_batch, log_line
 from pooling import pool
@@ -28,18 +27,12 @@ parser.set_defaults(max_pooling=False)
 parser.set_defaults(avg_pooling=False)
 parser.set_defaults(include_Lanczos=False)
 parser.set_defaults(include_RainFARM=False)
-parser.set_defaults(include_ecPoint=False)
-parser.set_defaults(include_ecPoint_mean=False)
 parser.set_defaults(include_constant=False)
 parser.set_defaults(include_zeros=False)
 parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
                     help="Include Lanczos benchmark")
 parser.add_argument('--include_RainFARM', dest='include_RainFARM', action='store_true',
                     help="Include RainFARM benchmark")
-parser.add_argument('--include_ecPoint', dest='include_ecPoint', action='store_true',
-                    help="Include ecPoint benchmark")
-parser.add_argument('--include_ecPoint_mean', dest='include_ecPoint_mean', action='store_true',
-                    help="Include ecPoint mean benchmark")
 parser.add_argument('--include_constant', dest='include_constant', action='store_true',
                     help="Include constant upscaling as benchmark")
 parser.add_argument('--include_zeros', dest='include_zeros', action='store_true',
@@ -60,7 +53,7 @@ log_fname = os.path.join(log_folder, "benchmarks_{}_{}_{}.txt".format(predict_ye
 # setup data
 dates = get_dates(predict_year)
 data_benchmarks = DataGeneratorFull(dates=dates,
-                                    ifs_fields=ecpoint.ifs_fields,
+                                    ifs_fields=all_ifs_fields,
                                     batch_size=batch_size,
                                     log_precip=False,
                                     crop=True,
@@ -74,12 +67,6 @@ if args.include_Lanczos:
     benchmark_methods.append('lanczos')
 if args.include_RainFARM:
     benchmark_methods.append('rainfarm')
-if args.include_ecPoint:
-    benchmark_methods.append('ecpoint_no-corr')
-    benchmark_methods.append('ecpoint_part-corr')
-    benchmark_methods.append('ecpoint_full-corr')
-if args.include_ecPoint_mean:
-    benchmark_methods.append('ecpoint_mean')
 if args.include_constant:
     benchmark_methods.append('constant')
 if args.include_zeros:
@@ -123,18 +110,6 @@ for benchmark in benchmark_methods:
             sample_benchmark = benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 1])
         elif benchmark == 'rainfarm':  # this has ens=100 every time
             sample_benchmark = benchmarks.rainfarmensemble(inp['lo_res_inputs'][..., 1])
-        elif benchmark == 'ecpoint_no-corr':  # pred_ensemble will be batch_size x H x W x 100
-            sample_benchmark = benchmarks.ecpointmodel(inp['lo_res_inputs'],
-                                                       data_format="channels_last")
-        elif benchmark == 'ecpoint_part-corr':
-            sample_benchmark = benchmarks.ecpointboxensmodel(inp['lo_res_inputs'],
-                                                             data_format="channels_last")
-        elif benchmark == 'ecpoint_full-corr':  # this has ens=100 every time
-            sample_benchmark = benchmarks.ecpointPDFmodel(inp['lo_res_inputs'],
-                                                          data_format="channels_last")
-        elif benchmark == 'ecpoint_mean':  # this has ens=100 every time
-            sample_benchmark = np.mean(benchmarks.ecpointPDFmodel(inp['lo_res_inputs'],
-                                                                  data_format="channels_last"), axis=-1)
         elif benchmark == 'constant':
             sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., 1])
         elif benchmark == 'zeros':
@@ -142,7 +117,7 @@ for benchmark in benchmark_methods:
         else:
             assert False
 
-        if benchmark in ['rainfarm', 'ecpoint_no-corr', 'ecpoint_part-corr', 'ecpoint_full-corr']:
+        if benchmark in ['rainfarm']:
             # these benchmarks produce an ensemble of samples
             for method in pooling_methods:
                 if method == 'no_pooling':

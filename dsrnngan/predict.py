@@ -15,7 +15,6 @@ from matplotlib.colors import ListedColormap
 
 import benchmarks
 import data
-import ecpoint
 import read_config
 from data import all_ifs_fields, get_dates, ifs_norm
 from data_generator_ifs import DataGenerator as DataGeneratorFull
@@ -66,7 +65,6 @@ parser.set_defaults(plot_rapsd=False)
 parser.set_defaults(include_Lanczos=False)
 parser.set_defaults(include_RainFARM=False)
 parser.set_defaults(include_deterministic=False)
-parser.set_defaults(include_ecPoint=False)
 parser.add_argument('--predict_full_image', dest='predict_full_image', action='store_true',
                     help="Predict on full images")
 parser.add_argument('--plot_rapsd', dest='plot_rapsd', action='store_true',
@@ -77,8 +75,6 @@ parser.add_argument('--include_RainFARM', dest='include_RainFARM', action='store
                     help="Include RainFARM benchmark")
 parser.add_argument('--include_deterministic', dest='include_deterministic', action='store_true',
                     help="Include deterministic model for comparison")
-parser.add_argument('--include_ecPoint', dest='include_ecPoint', action='store_true',
-                    help="Include ecPoint benchmark")
 args = parser.parse_args()
 
 log_folder = args.log_folder
@@ -126,8 +122,8 @@ elif problem_type == "superresolution":
     downsample = True
     plot_input_title = 'Downsampled'
     input_channels = 1  # superresolution problem doesn't have all 9 IFS fields
-    if args.include_RainFARM or args.include_ecPoint or args.include_Lanczos:
-        raise Exception("Cannot include ecPoint/Lanczos/RainFARM results for downsampled problem")
+    if args.include_RainFARM or args.include_Lanczos:
+        raise Exception("Cannot include Lanczos/RainFARM results for downsampled problem")
 
 # load appropriate dataset
 if args.predict_full_image:
@@ -144,7 +140,6 @@ if args.predict_full_image:
                                      downsample=downsample)
 
 else:
-    include_ecPoint = False
     plot_label = 'small'
     data_predict = create_fixed_dataset(predict_year,
                                         batch_size=batch_size,
@@ -166,15 +161,15 @@ if mode == "VAEGAN":
 gen.load_weights(weights_fn)
 
 # dataset for benchmarks
-data_ecpoint = DataGeneratorFull(dates=dates,
-                                 ifs_fields=ecpoint.ifs_fields,
-                                 batch_size=batch_size,
-                                 log_precip=False,
-                                 crop=True,
-                                 shuffle=True,
-                                 hour='random',
-                                 ifs_norm=False,
-                                 downsample=downsample)
+data_benchmarks = DataGeneratorFull(dates=dates,
+                                    ifs_fields=data.all_ifs_fields,
+                                    batch_size=batch_size,
+                                    log_precip=False,
+                                    crop=True,
+                                    shuffle=True,
+                                    hour='random',
+                                    ifs_norm=False,
+                                    downsample=downsample)
 if args.include_deterministic:
     if problem_type == 'superresolution':
         filters_det = 256
@@ -201,7 +196,6 @@ seq_const = []
 seq_lanczos = []
 seq_rainfarm = []
 seq_det = []
-seq_ecpoint = []
 dates_save = []
 hours_save = []
 dummy = np.zeros((1, 940, 940))
@@ -269,20 +263,15 @@ for i in range(num_samples):
         pred_ensemble = np.array(pred_ensemble)
         pred.append(pred_ensemble)
 
-data_ecpoint_iter = iter(data_ecpoint)
+data_benchmarks_iter = iter(data_benchmarks)
 for i in range(num_samples):
-    (inp, outp) = next(data_ecpoint_iter)
-    # ecPoint prediction
-    if args.include_ecPoint:
-        seq_ecpoint.append(np.mean(benchmarks.ecpointPDFmodel(inp['lo_res_inputs']), axis=-1))
-    else:
-        seq_ecpoint.append(dummy)
+    inp, outp = next(data_benchmarks_iter)
     if args.include_RainFARM:
-        seq_rainfarm.append(benchmarks.rainfarmmodel(inp['lo_res_inputs'][..., 1]))
+        seq_rainfarm.append(benchmarks.rainfarmmodel(inp['lo_res_inputs'][..., 0]))
     else:
         seq_rainfarm.append(dummy)
     if args.include_Lanczos:
-        seq_lanczos.append(benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 1]))
+        seq_lanczos.append(benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 0]))
     else:
         seq_lanczos.append(dummy)
 
@@ -418,8 +407,6 @@ for i in range(pred_ensemble_size):
     labels.append(f"{mode} pred {i+1}")
 if args.include_RainFARM:
     labels.append("RainFARM")
-if args.include_ecPoint:
-    labels.append("ecPoint mean")
 if args.include_deterministic:
     labels.append("Det CNN")
 if args.include_Lanczos:
@@ -434,7 +421,6 @@ for i in range(num_samples):
     tmp['Lanczos'] = seq_lanczos[i][0, ...]
     tmp['RainFARM'] = seq_rainfarm[i][0, ...]
     tmp['Det CNN'] = seq_det[i][0, ..., 0]
-    tmp['ecPoint mean'] = seq_ecpoint[i][0, ...]
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]
     for j in range(pred_ensemble_size):

@@ -386,7 +386,6 @@ def plot_roc_curves(roc_files,
                     log_path,
                     precip_values,
                     pooling_methods,
-                    ecpoint_methods,
                     lw=2):
 
     roc_data = {}
@@ -409,18 +408,6 @@ def plot_roc_curves(roc_files,
                      roc_data['VAEGAN_tpr'][method][i],
                      lw=lw,
                      label="VAEGAN (area = %0.2f)" % roc_data['VAEGAN_auc'][method][i])
-            for ecpoint_method in ecpoint_methods:
-                ecpoint_label = 'ecPoint_' + ecpoint_method
-                if method == 'no_pooling' and ecpoint_method == 'partcorr':
-                    continue
-                if method == 'no_pooling' and ecpoint_method == 'nocorr':
-                    ecpoint_plot_label = 'ecPoint'
-                else:
-                    ecpoint_plot_label = ecpoint_label
-                plt.plot(roc_data[ecpoint_label + '_' + 'fpr'][method][i],
-                         roc_data[ecpoint_label + '_' + 'tpr'][method][i],
-                         lw=lw,
-                         label=f"{ecpoint_plot_label} (area = %0.2f)" % roc_data[ecpoint_label + '_' + 'auc'][method][i])
 
             plt.plot([0, 1], [0, 1], 'k--', lw=lw)  # no-skill
             plt.plot([], [], ' ',
@@ -440,7 +427,6 @@ def plot_prc_curves(prc_files,
                     log_path,
                     precip_values,
                     pooling_methods,
-                    ecpoint_methods,
                     lw=2):
 
     prc_data = {}
@@ -463,18 +449,6 @@ def plot_prc_curves(prc_files,
                      prc_data['VAEGAN_pre'][method][i],
                      lw=lw,
                      label="VAEGAN (area = %0.2f)" % prc_data['VAEGAN_auc'][method][i])
-            for ecpoint_method in ecpoint_methods:
-                ecpoint_label = 'ecPoint_' + ecpoint_method
-                if method == 'no_pooling' and ecpoint_method == 'partcorr':
-                    continue
-                if method == 'no_pooling' and ecpoint_method == 'nocorr':
-                    ecpoint_plot_label = 'ecPoint'
-                else:
-                    ecpoint_plot_label = ecpoint_label
-                plt.plot(prc_data[ecpoint_label + '_' + 'rec'][method][i],
-                         prc_data[ecpoint_label + '_' + 'pre'][method][i],
-                         lw=lw,
-                         label=f"{ecpoint_plot_label} (area = %0.2f)" % prc_data[ecpoint_label + '_' + 'auc'][method][i])
             plt.plot([0, 1],
                      [prc_data['GAN_base'][method][i], prc_data['GAN_base'][method][i]],
                      '--',
@@ -497,7 +471,6 @@ def plot_fss(fss_files,
              nimg,
              precip_values,
              spatial_scales,
-             ecpoint_methods,
              lw=2):
 
     for i in range(len(precip_values)):
@@ -572,9 +545,6 @@ def plot_rapsd(rapsd_files,
             for (i, colour) in zip(range(len(rapsd_data_labels)), colours):
                 if rapsd_data_labels[i] == 'IFS':
                     # skip the input data b/c the resolution is different
-                    pass
-                elif rapsd_data_labels[i] == 'ecPoint mean':
-                    # skip b/c it's not spatially coherent
                     pass
                 elif len(rapsd_data[model][k][rapsd_data_labels[i]].shape) != 2:
                     # if preds weren't made for this method don't plot

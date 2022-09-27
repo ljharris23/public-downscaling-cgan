@@ -17,8 +17,7 @@ log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/r
 # log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainVAEGAN'; model_numbers = [550400]
 # log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-GANnoCL'; model_numbers = [435200]
 
-calc_ecpoint_all = False
-calc_ecpoint_partcorr = True
+calc_upscale = True
 predict_year = 2020
 predict_full_image = True
 ensemble_members = 100
@@ -54,5 +53,4 @@ roc.calculate_roc(mode=mode,
                   predict_year=predict_year,
                   predict_full_image=predict_full_image,
                   ensemble_members=ensemble_members,
-                  calc_ecpoint_all=calc_ecpoint_all,
-                  calc_ecpoint_partcorr=calc_ecpoint_partcorr)
+                  calc_upscale=calc_upscale)
