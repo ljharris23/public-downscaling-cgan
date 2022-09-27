@@ -16,18 +16,9 @@ records_folder = data_paths["TFRecords"]["tfrecords_path"]
 def DataGenerator(year, batch_size, repeat=True, downsample=False, weights=None):
     return create_mixed_dataset(year, batch_size, repeat=repeat, downsample=downsample, weights=weights)
 
-# def create_random_dataset(year,batch_size,era_shape=(10,10,9),con_shape=(100,100,2),
-#                          out_shape=(100,100,1),repeat=True,
-#                          folder=records_folder, shuffle_size = 1024):
-#     dataset = create_dataset(year, '*', era_shape=era_shape,con_shape=con_shape,
-#                                out_shape=out_shape,folder=folder,repeat=repeat,
-#                                shuffle_size = shuffle_size)
-#     return dataset.batch(batch_size).prefetch(2)
-
-
 def create_mixed_dataset(year,
                          batch_size,
-                         era_shape=(20, 20, 9),
+                         img_shape=(20, 20, 9),
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
                          repeat=True,
@@ -41,7 +32,7 @@ def create_mixed_dataset(year,
         weights = [1./classes]*classes
     datasets = [create_dataset(year,
                                i,
-                               era_shape=era_shape,
+                               img_shape=img_shape,
                                con_shape=con_shape,
                                out_shape=out_shape,
                                folder=folder,
@@ -103,7 +94,7 @@ def _parse_batch(record_batch,
 
 def create_dataset(year,
                    clss,
-                   era_shape=(20, 20, 9),
+                   img_shape=(20, 20, 9),
                    con_shape=(200, 200, 2),
                    out_shape=(200, 200, 1),
                    folder=records_folder,
@@ -123,7 +114,7 @@ def create_dataset(year,
                                  num_parallel_reads=AUTOTUNE)
     ds = ds.shuffle(shuffle_size)
     ds = ds.map(lambda x: _parse_batch(x,
-                                       insize=era_shape,
+                                       insize=img_shape,
                                        consize=con_shape,
                                        outsize=out_shape))
     if repeat:
@@ -136,7 +127,7 @@ def create_fixed_dataset(year=None,
                          mode='validation',
                          batch_size=16,
                          downsample=False,
-                         era_shape=(20, 20, 9),
+                         img_shape=(20, 20, 9),
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
                          name=None,
@@ -154,7 +145,7 @@ def create_fixed_dataset(year=None,
     ds = tf.data.TFRecordDataset(files_ds,
                                  num_parallel_reads=1)
     ds = ds.map(lambda x: _parse_batch(x,
-                                       insize=era_shape,
+                                       insize=img_shape,
                                        consize=con_shape,
                                        outsize=out_shape))
     ds = ds.batch(batch_size)
@@ -172,7 +163,7 @@ def _float_feature(list_of_floats):  # float32
 def write_data(year,
                ifs_fields=all_ifs_fields,
                hours=ifs_hours,
-               era_chunk_width=20,
+               img_chunk_width=20,
                num_class=4,
                log_precip=True,
                ifs_norm=True):
@@ -182,11 +173,11 @@ def write_data(year,
     dates = get_dates(year)
 
     # nim_size = 940
-    era_size = 94
+    img_size = 94
 
     upscaling_factor = 10
 
-    nsamples = (era_size//era_chunk_width + 1)**2
+    nsamples = (img_size//img_chunk_width + 1)**2
     print("Samples per image:", nsamples)
     import random
 
@@ -209,23 +200,23 @@ def write_data(year,
             sample = dgc.__getitem__(batch)
             for k in range(sample[1]['output'].shape[0]):
                 for ii in range(nsamples):
-                    # e.g. for ERA width 94 and era_chunk_width 20, can have 0:20 up to 74:94
-                    idx = random.randint(0, era_size-era_chunk_width)
-                    idy = random.randint(0, era_size-era_chunk_width)
+                    # e.g. for image width 94 and img_chunk_width 20, can have 0:20 up to 74:94
+                    idx = random.randint(0, img_size-img_chunk_width)
+                    idy = random.randint(0, img_size-img_chunk_width)
 
                     nimrod = sample[1]['output'][k,
-                                                 idx*upscaling_factor:(idx+era_chunk_width)*upscaling_factor,
-                                                 idy*upscaling_factor:(idy+era_chunk_width)*upscaling_factor].flatten()
+                                                 idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
+                                                 idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor].flatten()
                     const = sample[0]['hi_res_inputs'][k,
-                                                       idx*upscaling_factor:(idx+era_chunk_width)*upscaling_factor,
-                                                       idy*upscaling_factor:(idy+era_chunk_width)*upscaling_factor,
+                                                       idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
+                                                       idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor,
                                                        :].flatten()
-                    era = sample[0]['lo_res_inputs'][k,
-                                                     idx:idx+era_chunk_width,
-                                                     idy:idy+era_chunk_width,
+                    input_img = sample[0]['lo_res_inputs'][k,
+                                                     idx:idx+img_chunk_width,
+                                                     idy:idy+img_chunk_width,
                                                      :].flatten()
                     feature = {
-                        'generator_input': _float_feature(era),
+                        'generator_input': _float_feature(input_img),
                         'constants': _float_feature(const),
                         'generator_output': _float_feature(nimrod)
                     }
