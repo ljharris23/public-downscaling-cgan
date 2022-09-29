@@ -26,7 +26,7 @@ class Deterministic(object):
 
     def load(self, load_files):
         self.gen.load_weights(load_files["gen_weights"])
-        self.gen_trainer._make_train_function()
+        self.gen_trainer.make_train_function()
         load_opt_weights(self.gen_trainer, load_files["gen_opt_weights"])
 
     def save(self, save_fn_root):

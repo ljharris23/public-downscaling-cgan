@@ -45,11 +45,11 @@ class WGANGP(object):
         self.disc.load_weights(load_files["disc_weights"])
 
         with Nontrainable(self.disc):
-            self.gen_trainer._make_train_function()
+            self.gen_trainer.make_train_function()
             load_opt_weights(self.gen_trainer,
                              load_files["gen_opt_weights"])
         with Nontrainable(self.gen):
-            self.disc_trainer._make_train_function()
+            self.disc_trainer.make_train_function()
             load_opt_weights(self.disc_trainer,
                              load_files["disc_opt_weights"])
 

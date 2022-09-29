@@ -24,6 +24,8 @@ if __name__ == "__main__":
     parser.set_defaults(do_training=True)
     parser.add_argument('--no_train', dest='do_training', action='store_false',
                         help="Do NOT carry out training, only perform eval")
+    parser.add_argument('--restart', dest='restart', action='store_true',
+                        help="Restart training from latest checkpoint")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--eval_full', dest='evalnum', action='store_const', const="full")
     group.add_argument('--eval_short', dest='evalnum', action='store_const', const="short")
@@ -154,27 +156,27 @@ if __name__ == "__main__":
             batch_size=batch_size,
             load_full_image=False)
 
-    # Leaving around for now in case this is useful for e.g. multiple training
-#         if load_weights_root:  # load weights and run status
-#             model.load(model.filenames_from_root(load_weights_root))
-#             with open(load_weights_root + "-run_status.json", 'r') as f:
-#                 run_status = json.load(f)
-#             training_samples = run_status["training_samples"]
+        if args.restart: # load weights and run status
 
-#             if log_path:
-#                 log_file = "{}/log.txt".format(log_path)
-#                 log = pd.read_csv(log_file)
-
-        if False:
-            pass
+            model.load(model.filenames_from_root(model_weights_root))
+            with open(log_folder + "-run_status.json", 'r') as f:
+                run_status = json.load(f)
+            training_samples = run_status["training_samples"]
+            checkpoint = int(training_samples / (steps_per_checkpoint * batch_size)) + 1
+            
+            log_file = "{}/log.txt".format(log_folder)
+            log = pd.read_csv(log_file)
+            log_list = [log]
+            
         else:  # initialize run status
             training_samples = 0
 
             log_file = os.path.join(log_folder, "log.txt")
+            log_list = []
 
         plot_fname = os.path.join(log_folder, "progress.pdf")
 
-        log_list = []
+        
         while (training_samples < num_samples):  # main training loop
 
             print("Checkpoint {}/{}".format(checkpoint, num_checkpoints))
