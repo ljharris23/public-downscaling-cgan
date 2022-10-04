@@ -31,27 +31,21 @@ if __name__ == "__main__":
     group.add_argument('--eval_short', dest='evalnum', action='store_const', const="short")
     group.add_argument('--eval_blitz', dest='evalnum', action='store_const', const="blitz")
     parser.set_defaults(evalnum=None)
-    parser.set_defaults(rank_small=False)
-    parser.set_defaults(rank_full=False)
-    parser.set_defaults(qual_small=False)
-    parser.set_defaults(qual_full=False)
+    parser.set_defaults(rank=False)
+    parser.set_defaults(qual=False)
     parser.set_defaults(plot_ranks=False)
-    parser.add_argument('--rank_small', dest='rank_small', action='store_true',
-                        help="Include CRPS/rank evaluation on small images")
-    parser.add_argument('--rank_full', dest='rank_full', action='store_true',
-                        help="Include CRPS/rank evaluation on full images")
-    parser.add_argument('--qual_small', dest='qual_small', action='store_true',
-                        help="Include image quality metrics on small images")
-    parser.add_argument('--qual_full', dest='qual_full', action='store_true',
-                        help="Include image quality metrics on full images")
+    parser.add_argument('--rank', dest='rank', action='store_true',
+                        help="Include CRPS/rank evaluation on full-size images")
+    parser.add_argument('--qual', dest='qual', action='store_true',
+                        help="Include image quality metrics on full-size images")
     parser.add_argument('--plot_ranks', dest='plot_ranks', action='store_true',
                         help="Plot rank histograms")
     args = parser.parse_args()
 
-    if args.evalnum is None and (args.rank_small or args.rank_full or args.qual_small or args.qual_full):
+    if args.evalnum is None and (args.rank or args.qual):
         raise RuntimeError("You asked for evaluation to occur, but did not pass in '--eval_full', '--eval_short', or '--eval_blitz' to specify length of evaluation")
 
-        # Read in the configurations
+    # Read in the configurations
     if args.config is not None:
         config_path = args.config
     else:
@@ -219,10 +213,8 @@ if __name__ == "__main__":
     else:
         print("Training skipped...")
 
-    rank_small_fname = os.path.join(log_folder, "rank-small.txt")
-    rank_full_fname = os.path.join(log_folder, "rank-full.txt")
-    qual_small_fname = os.path.join(log_folder, "qual-small.txt")
-    qual_full_fname = os.path.join(log_folder, "qual-full.txt")
+    rank_fname = os.path.join(log_folder, "rank.txt")
+    qual_fname = os.path.join(log_folder, "qual.txt")
 
     # model iterations to save full rank data to disk for during evaluations;
     # necessary for plot rank histograms. these are large files, so small
@@ -242,37 +234,17 @@ if __name__ == "__main__":
         model_numbers = np.arange(0, num_samples + 1, interval)[1:].tolist()
 
     # evaluate model performance
-    if args.qual_small:
+    if args.qual:
         evaluation.quality_metrics_by_time(mode=mode,
                                            arch=arch,
                                            val_years=val_years,
-                                           log_fname=qual_small_fname,
-                                           weights_dir=model_weights_root,
-                                           downsample=downsample,
-                                           weights=training_weights,
-                                           load_full_image=False,
-                                           model_numbers=model_numbers,
-                                           batch_size=batch_size,
-                                           num_batches=num_batches,
-                                           filters_gen=filters_gen,
-                                           filters_disc=filters_disc,
-                                           input_channels=input_channels,
-                                           latent_variables=latent_variables,
-                                           noise_channels=noise_channels,
-                                           rank_samples=2,
-                                           padding=padding)
-
-    if args.qual_full:
-        evaluation.quality_metrics_by_time(mode=mode,
-                                           arch=arch,
-                                           val_years=val_years,
-                                           log_fname=qual_full_fname,
+                                           log_fname=qual_fname,
                                            weights_dir=model_weights_root,
                                            downsample=downsample,
                                            weights=training_weights,
                                            load_full_image=True,
                                            model_numbers=model_numbers,
-                                           batch_size=1,  # memory issues
+                                           batch_size=1,  # do inference 1 at a time, in case of memory issues
                                            num_batches=num_batches,
                                            filters_gen=filters_gen,
                                            filters_disc=filters_disc,
@@ -282,36 +254,11 @@ if __name__ == "__main__":
                                            rank_samples=2,
                                            padding=padding)
 
-    if args.rank_small:
+    if args.rank:
         evaluation.rank_metrics_by_time(mode=mode,
                                         arch=arch,
                                         val_years=val_years,
-                                        log_fname=rank_small_fname,
-                                        weights_dir=model_weights_root,
-                                        downsample=downsample,
-                                        weights=training_weights,
-                                        add_noise=add_noise,
-                                        noise_factor=noise_factor,
-                                        load_full_image=False,
-                                        model_numbers=model_numbers,
-                                        ranks_to_save=ranks_to_save,
-                                        batch_size=batch_size,
-                                        num_batches=num_batches,
-                                        filters_gen=filters_gen,
-                                        filters_disc=filters_disc,
-                                        input_channels=input_channels,
-                                        latent_variables=latent_variables,
-                                        noise_channels=noise_channels,
-                                        padding=padding,
-                                        rank_samples=10,
-                                        max_pooling=max_pooling,
-                                        avg_pooling=avg_pooling)
-
-    if args.rank_full:
-        evaluation.rank_metrics_by_time(mode=mode,
-                                        arch=arch,
-                                        val_years=val_years,
-                                        log_fname=rank_full_fname,
+                                        log_fname=rank_fname,
                                         weights_dir=model_weights_root,
                                         downsample=downsample,
                                         weights=training_weights,
@@ -320,7 +267,7 @@ if __name__ == "__main__":
                                         load_full_image=True,
                                         model_numbers=model_numbers,
                                         ranks_to_save=ranks_to_save,
-                                        batch_size=1,  # memory issues
+                                        batch_size=1,  # ditto
                                         num_batches=num_batches,
                                         filters_gen=filters_gen,
                                         filters_disc=filters_disc,
