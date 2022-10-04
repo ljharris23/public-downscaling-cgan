@@ -81,12 +81,12 @@ python main.py --config <path/to/config/file>
 There are a number of options you can use at this point. These will 
 evaluate your model after it has finished training:
 
---rank_small or --rank_full flags will run (small/large image) CRPS/rank based evalution
---qual_small or --qual_full flags will run (small/large image) image quality based evalution
+--rank flag will run CRPS/rank-based evaluation
+--qual flag will run image quality based evaluation (RMSE, MAE, etc.)
 --plot_ranks will plot rank histograms
 	     N.B. you must run rank based eval first
 	   
-If you choose to run --rank_small/full and/or --qual_small/full, you must
+If you choose to run --rank and/or --qual, you must
 also specify if you want to do this for all model iterations or 
 just a selection. Do this using 
 
@@ -104,8 +104,8 @@ time. Possibly weeks. You have been warned.
 As an example, to train a model and evaluate it fully but for only the
 last few model iterations, on full images, you could run:
 
-python main.py --config <path/to/config/file> --eval_blitz --rank_full
---qual_full --plot_ranks
+python main.py --config <path/to/config/file> --eval_blitz --rank
+--qual --plot_ranks
 
 2. If you've already trained your model, and you just want to run some 
 evaluation, use the --no_train flag, for example:
@@ -130,17 +130,11 @@ Optional arguments:
 
 There are also the following optional arguments:
 - --predict_full_image          to predict on the full image dataset
-- --include_Lanczos     	includes Lanczos interpolation prediction
-- --include_ecPoint     	includes ecPoint-based prediction
-- --include_RainFARM    	includes RainFARM prediction
-- --include_deterministic       includes deterministic prediction for comparison.
-			N.B. Probably don't use this for comparing against
-			a deterministic model. 
 
 For example:
 
 python predict.py --log_folder <path/to/model> --model_number 0006400 
---num_samples 7 --predict_full_image --include_ecPoint
+--num_samples 7 --predict_full_image
 
 4. If, for whatever reason, you don't want to go through main.py but you
 want to do some evaluation on specific models only, you can use the scripts
@@ -165,9 +159,7 @@ time & memory reasons). So, for a proper comparison you *must* evaluate
 your model and specify 100 ensemble members.
 
 For example:
-python run_benchmarks.py --log_folder /path/to/model --include_Lanczos 
---include_ecPoint --include_RainFARM --include_ecPoint_mean 
---include_constant --include_zeros
+python run_benchmarks.py --log_folder /path/to/model --include_constant --include_zeros
 
 7. This is research code so please let us know if something is wrong and
 also note that it definitely isn't perfect :)
