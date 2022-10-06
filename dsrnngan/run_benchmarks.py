@@ -22,11 +22,8 @@ parser.add_argument('--num_batches', type=int,
                     help="number of images to predict on", default=256)
 parser.set_defaults(max_pooling=False)
 parser.set_defaults(avg_pooling=False)
-parser.set_defaults(include_Lanczos=False)
 parser.set_defaults(include_constant=False)
 parser.set_defaults(include_zeros=False)
-parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
-                    help="Include Lanczos benchmark")
 parser.add_argument('--include_constant', dest='include_constant', action='store_true',
                     help="Include constant upscaling as benchmark")
 parser.add_argument('--include_zeros', dest='include_zeros', action='store_true',
@@ -56,8 +53,6 @@ data_benchmarks = DataGeneratorFull(dates=dates,
                                     fcst_norm=False)
 
 benchmark_methods = []
-if args.include_Lanczos:
-    benchmark_methods.append('lanczos')
 if args.include_constant:
     benchmark_methods.append('constant')
 if args.include_zeros:
@@ -97,9 +92,7 @@ for benchmark in benchmark_methods:
         (inp, outp) = next(data_benchmarks_iter)
         # pooling requires 4 dimensions NHWC
         sample_truth = np.expand_dims(outp['output'], axis=-1)
-        if benchmark == 'lanczos':
-            sample_benchmark = benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 1])
-        elif benchmark == 'constant':
+        if benchmark == 'constant':
             sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., 1])
         elif benchmark == 'zeros':
             sample_benchmark = benchmarks.zerosmodel(inp['lo_res_inputs'][..., 1])

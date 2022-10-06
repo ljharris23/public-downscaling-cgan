@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 import properscoring as ps
 from crps import crps_ensemble
@@ -10,24 +9,6 @@ def mse(a, b):
 
 def mae(a, b):
     return (np.abs(a-b)).mean()
-
-
-def lanczosmodel(indata):
-    if type(indata) == dict:
-        data = indata['lo_res_inputs']
-    else:
-        data = indata
-    if len(data.shape) == 2:
-        return cv2.resize(data,
-                          dsize=(data.shape[0]*10, data.shape[1]*10),
-                          interpolation=cv2.INTER_LANCZOS4)
-    else:
-        ans = []
-        for i in range(data.shape[0]):
-            ans.append(cv2.resize(data[i, ...],
-                                  dsize=(data.shape[-2]*10, data.shape[-1]*10),
-                                  interpolation=cv2.INTER_LANCZOS4))
-        return np.stack(ans, axis=0)
 
 
 def constantupscalemodel(data):

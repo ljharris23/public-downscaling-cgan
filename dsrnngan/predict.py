@@ -11,7 +11,6 @@ import seaborn as sns
 from matplotlib import colorbar, colors, gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.colors import ListedColormap
-import benchmarks
 import data
 import read_config
 from data import all_fcst_fields, get_dates, fcst_norm
@@ -60,13 +59,10 @@ parser.add_argument('--batch_size', type=int,
                     help="batch size", default=4)
 parser.set_defaults(predict_full_image=False)
 parser.set_defaults(plot_rapsd=False)
-parser.set_defaults(include_Lanczos=False)
 parser.add_argument('--predict_full_image', dest='predict_full_image', action='store_true',
                     help="Predict on full images")
 parser.add_argument('--plot_rapsd', dest='plot_rapsd', action='store_true',
                     help="Plot Radially Averaged Power Spectral Density")
-parser.add_argument('--include_Lanczos', dest='include_Lanczos', action='store_true',
-                    help="Include Lanczos benchmark")
 args = parser.parse_args()
 
 log_folder = args.log_folder
@@ -111,8 +107,6 @@ elif problem_type == "superresolution":
     downsample = True
     plot_input_title = 'Downsampled'
     input_channels = 1  # superresolution problem doesn't have all 9 input fields
-    if args.include_Lanczos:
-        raise Exception("Cannot include Lanczos results for downsampled problem")
 
 # load appropriate dataset
 if args.predict_full_image:
@@ -162,7 +156,6 @@ pred = []
 seq_real = []
 seq_cond = []
 seq_const = []
-seq_lanczos = []
 dates_save = []
 hours_save = []
 dummy = np.zeros((1, 940, 940))
@@ -228,10 +221,6 @@ for i in range(num_samples):
 data_benchmarks_iter = iter(data_benchmarks)
 for i in range(num_samples):
     inp, outp = next(data_benchmarks_iter)
-    if args.include_Lanczos:
-        seq_lanczos.append(benchmarks.lanczosmodel(inp['lo_res_inputs'][..., 0]))
-    else:
-        seq_lanczos.append(dummy)
 
 # plot input conditions and prediction example
 # len(seq) = num_predictions (iterations through data generator)
@@ -363,8 +352,6 @@ plt.close()
 labels = [plot_input_title, "TRUTH"]
 for i in range(pred_ensemble_size):
     labels.append(f"{mode} pred {i+1}")
-if args.include_Lanczos:
-    labels.append("Lanczos")
 
 # plot a range of prediction examples for different downscaling methods
 sequences = []
@@ -372,7 +359,6 @@ for i in range(num_samples):
     tmp = {}
     tmp['TRUTH'] = seq_real[i][0, ..., 0]
     tmp[plot_input_title] = seq_cond[i][0, ..., 0]
-    tmp['Lanczos'] = seq_lanczos[i][0, ...]
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]
     for j in range(pred_ensemble_size):
