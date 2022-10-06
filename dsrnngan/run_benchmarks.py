@@ -22,12 +22,12 @@ parser.add_argument('--num_batches', type=int,
                     help="number of images to predict on", default=256)
 parser.set_defaults(max_pooling=False)
 parser.set_defaults(avg_pooling=False)
-parser.set_defaults(include_constant=False)
+parser.set_defaults(include_nn_interp=False)
 parser.set_defaults(include_zeros=False)
-parser.add_argument('--include_constant', dest='include_constant', action='store_true',
-                    help="Include constant upscaling as benchmark")
+parser.add_argument('--include_nn_interp', dest='include_nn_interp', action='store_true',
+                    help="Include nearest-neighbour upsampling as benchmark")
 parser.add_argument('--include_zeros', dest='include_zeros', action='store_true',
-                    help="Include zero prediction benchmark")
+                    help="Include all-zero prediction as benchmark")
 parser.add_argument('--max_pooling', dest='max_pooling', action='store_true',
                     help="Include max pooling for CRPS")
 parser.add_argument('--avg_pooling', dest='avg_pooling', action='store_true',
@@ -53,8 +53,8 @@ data_benchmarks = DataGeneratorFull(dates=dates,
                                     fcst_norm=False)
 
 benchmark_methods = []
-if args.include_constant:
-    benchmark_methods.append('constant')
+if args.include_nn_interp:
+    benchmark_methods.append('nn_interp')
 if args.include_zeros:
     benchmark_methods.append('zeros')
 
@@ -94,12 +94,12 @@ for benchmark in benchmark_methods:
         (inp, outp) = next(data_benchmarks_iter)
         # pooling requires 4 dimensions NHWC
         sample_truth = np.expand_dims(outp['output'], axis=-1)
-        if benchmark == 'constant':
-            sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., tpidx])
+        if benchmark == 'nn_interp':
+            sample_benchmark = benchmarks.nn_interp_model(inp['lo_res_inputs'][..., tpidx], 10)
         elif benchmark == 'zeros':
-            sample_benchmark = benchmarks.zerosmodel(inp['lo_res_inputs'][..., tpidx])
+            sample_benchmark = benchmarks.zeros_model(inp['lo_res_inputs'][..., tpidx], 10)
         else:
-            assert False
+            raise RuntimeError("Benchmark not recognised")
 
         sample_benchmark = np.expand_dims(sample_benchmark, axis=-1)
         for method in pooling_methods:

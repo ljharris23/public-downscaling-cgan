@@ -7,6 +7,7 @@ from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 import data
 import setupmodel
+from benchmarks import nn_interp_model
 from data import all_fcst_fields, get_dates
 from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import _init_VAEGAN
@@ -29,8 +30,8 @@ def calculate_roc(*,
                   padding,
                   predict_year,
                   predict_full_image,
-                  ensemble_members=100,
-                  calc_upscale=True):
+                  ensemble_members,
+                  calc_upsample):
 
     if problem_type == "normal":
         downsample = False
@@ -84,7 +85,7 @@ def calculate_roc(*,
                                             batch_size=batch_size,
                                             downsample=downsample)
 
-    if calc_upscale:
+    if calc_upsample:
         if not predict_full_image:
             raise RuntimeError('Data generator for benchmarks not implemented for small images')
         # requires a different data generator with different fields and no fcst_norm
@@ -96,6 +97,7 @@ def calculate_roc(*,
                                             constants=True,
                                             hour="random",
                                             fcst_norm=False)
+        tpidx = all_fcst_fields.index('tp')
 
     auc_scores_roc = {}  # will only contain GAN AUCs; used for "progress vs time" plot
     auc_scores_pr = {}
@@ -103,10 +105,10 @@ def calculate_roc(*,
         auc_scores_roc[method] = []
         auc_scores_pr[method] = []
 
-    # tidier to iterate over GAN checkpoints and upscale using joint code
+    # tidier to iterate over GAN checkpoints and NN-interp using joint code
     model_numbers_ec = model_numbers.copy()
-    if calc_upscale:
-        model_numbers_ec.extend(["constupsc"])
+    if calc_upsample:
+        model_numbers_ec.extend(["nn_interp"])
 
     for model_number in model_numbers_ec:
         print(f"calculating for model number {model_number}")
@@ -183,10 +185,10 @@ def calculate_roc(*,
                 gc.collect()
             else:
                 # pred_ensemble will be batch_size x ens x H x W
-                if model_number == "constupsc":
-                    tpidx = all_fcst_fields.index('tp')
+                if model_number == "nn_interp":
                     pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, tpidx], 1)
-                    pred_ensemble = np.repeat(np.repeat(pred_ensemble, 10, axis=-1), 10, axis=-2)
+                    pred_ensemble = nn_interp_model(pred_ensemble, 10)
+
                 else:
                     raise RuntimeError('Unknown model_number {}' % model_number)
 

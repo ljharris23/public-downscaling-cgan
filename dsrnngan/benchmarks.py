@@ -11,13 +11,12 @@ def mae(a, b):
     return (np.abs(a-b)).mean()
 
 
-def constantupscalemodel(data):
-    reshaped_inputs = np.repeat(np.repeat(data, 10, axis=-1), 10, axis=-2)
-    return reshaped_inputs
+def nn_interp_model(data, upsampling_factor):
+    return np.repeat(np.repeat(data, upsampling_factor, axis=-1), upsampling_factor, axis=-2)
 
 
-def zerosmodel(data):
-    return constantupscalemodel(np.zeros(data.shape))
+def zeros_model(data, upsampling_factor):
+    return nn_interp_model(np.zeros(data.shape), upsampling_factor)
 
 
 def mean_crps(obs, pred):

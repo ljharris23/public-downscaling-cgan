@@ -8,7 +8,7 @@ read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 
 # input parameters
 log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainGAN'; model_numbers = [460800]  # noqa: E702
-plot_upscale = False
+plot_upsample = True  # whether to compare against basic nearest-neighbour upsampling
 predict_year = 2020
 predict_full_image = True
 ensemble_members = 100
@@ -44,4 +44,4 @@ fss.plot_fss_curves(mode=mode,
                     predict_year=predict_year,
                     predict_full_image=predict_full_image,
                     ensemble_members=ensemble_members,
-                    plot_upscale=plot_upscale)
+                    plot_upsample=plot_upsample)
