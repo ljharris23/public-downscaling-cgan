@@ -150,18 +150,18 @@ if __name__ == "__main__":
             batch_size=batch_size,
             load_full_image=False)
 
-        if args.restart: # load weights and run status
+        if args.restart:  # load weights and run status
 
             model.load(model.filenames_from_root(model_weights_root))
             with open(log_folder + "-run_status.json", 'r') as f:
                 run_status = json.load(f)
             training_samples = run_status["training_samples"]
             checkpoint = int(training_samples / (steps_per_checkpoint * batch_size)) + 1
-            
+
             log_file = "{}/log.txt".format(log_folder)
             log = pd.read_csv(log_file)
             log_list = [log]
-            
+
         else:  # initialize run status
             training_samples = 0
 
@@ -170,7 +170,6 @@ if __name__ == "__main__":
 
         plot_fname = os.path.join(log_folder, "progress.pdf")
 
-        
         while (training_samples < num_samples):  # main training loop
 
             print("Checkpoint {}/{}".format(checkpoint, num_checkpoints))

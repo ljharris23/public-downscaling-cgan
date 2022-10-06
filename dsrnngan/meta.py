@@ -57,7 +57,7 @@ def save_opt_weights(model, filepath):
 
 def load_opt_weights(model, filepath):
     with h5py.File(filepath, mode='r') as f:
-        optimizer_weights_group = f['optimizer_weights'] # h5py group
+        optimizer_weights_group = f['optimizer_weights']  # h5py group
         optimizer_weight_names = optimizer_weights_group.attrs['weight_names']
         for name in optimizer_weight_names:
             optimizer_weight_values = optimizer_weights_group[name]

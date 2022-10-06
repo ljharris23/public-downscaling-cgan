@@ -205,16 +205,16 @@ def write_data(year,
                     idy = random.randint(0, img_size-img_chunk_width)
 
                     radar = sample[1]['output'][k,
-                                                 idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
-                                                 idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor].flatten()
+                                                idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
+                                                idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor].flatten()
                     const = sample[0]['hi_res_inputs'][k,
                                                        idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
                                                        idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor,
                                                        :].flatten()
                     forecast = sample[0]['lo_res_inputs'][k,
-                                                           idx:idx+img_chunk_width,
-                                                           idy:idy+img_chunk_width,
-                                                           :].flatten()
+                                                          idx:idx+img_chunk_width,
+                                                          idy:idy+img_chunk_width,
+                                                          :].flatten()
                     feature = {
                         'generator_input': _float_feature(forecast),
                         'constants': _float_feature(const),
