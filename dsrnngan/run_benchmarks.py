@@ -79,6 +79,8 @@ emmse_scores = {}
 mae_scores = {}
 rapsd_scores = {}
 
+tpidx = all_fcst_fields.index('tp')
+
 for benchmark in benchmark_methods:
     crps_scores[benchmark] = {}
     mse_scores[benchmark] = []
@@ -93,9 +95,9 @@ for benchmark in benchmark_methods:
         # pooling requires 4 dimensions NHWC
         sample_truth = np.expand_dims(outp['output'], axis=-1)
         if benchmark == 'constant':
-            sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., 1])
+            sample_benchmark = benchmarks.constantupscalemodel(inp['lo_res_inputs'][..., tpidx])
         elif benchmark == 'zeros':
-            sample_benchmark = benchmarks.zerosmodel(inp['lo_res_inputs'][..., 1])
+            sample_benchmark = benchmarks.zerosmodel(inp['lo_res_inputs'][..., tpidx])
         else:
             assert False
 

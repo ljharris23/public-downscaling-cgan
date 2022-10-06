@@ -226,11 +226,15 @@ for i in range(num_samples):
 # len(seq) = num_predictions (iterations through data generator)
 # seq[0].shape = [NHWC], C=9 for cond, C=2 for const, C=1 for real, pred
 # list entry[0] - sample image 0
-fcst_total = seq_cond[0][0, ..., 0]  # total precip
+tpidx = all_fcst_fields.index('tp')
+fcst_total = seq_cond[0][0, ..., tpidx]  # total precip
 if problem_type != 'superresolution':
-    fcst_conv = seq_cond[0][0, ..., 1]  # convective precip
-    fcst_u700 = seq_cond[0][0, ..., -2]  # u700
-    fcst_v700 = seq_cond[0][0, ..., -1]  # v700
+    cpidx = all_fcst_fields.index('cp')
+    uidx = all_fcst_fields.index('u700')
+    vidx = all_fcst_fields.index('v700')
+    fcst_conv = seq_cond[0][0, ..., cpidx]  # convective precip
+    fcst_u700 = seq_cond[0][0, ..., uidx]  # u700
+    fcst_v700 = seq_cond[0][0, ..., vidx]  # v700
 constant_0 = seq_const[0][0, ..., 0]  # orog
 constant_1 = seq_const[0][0, ..., 1]  # lsm
 radar = seq_real[0][0, ..., 0]
