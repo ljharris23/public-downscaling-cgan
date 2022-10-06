@@ -12,7 +12,7 @@ CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
 CONSTANTS_PATH_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_ORO"]
 
 all_fcst_fields = ['tp', 'cp', 'sp', 'tisr', 'cape', 'tclw', 'tcwv', 'u700', 'v700']
-fcst_hours = np.array([i for i in range(5)] + [i for i in range(6, 17)] + [i for i in range(18, 24)])
+fcst_hours = np.array(range(24))
 
 
 def denormalise(x):
