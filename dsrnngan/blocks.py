@@ -79,18 +79,7 @@ def residual_block(x, filters, conv_size=(3, 3), stride=1, relu_alpha=0.2, norm=
 
 
 def const_upscale_block(const_input, filters):
-
-    # Map (n x 250 x 250 x 2) to (n x 10 x 10 x f)
-    const_output = Conv2D(filters=filters, kernel_size=(6, 6), strides=4, padding="valid", activation="relu")(const_input)
-    const_output = Conv2D(filters=filters, kernel_size=(2, 2), strides=3, padding="valid", activation="relu")(const_output)
-    const_output = Conv2D(filters=filters, kernel_size=(3, 3), strides=2, padding="valid", activation="relu")(const_output)
-
-    return const_output
-
-
-def const_upscale_block_100(const_input, filters):
-
-    # Map (n x 100 x 100 x 2) to (n x 10 x 10 x f)
+    # Map (N x 10H x 10W x C) to (N x H x W x f)
     const_output = Conv2D(filters=filters, kernel_size=(5, 5), strides=5, padding="valid", activation="relu")(const_input)
     const_output = Conv2D(filters=filters, kernel_size=(2, 2), strides=2, padding="valid", activation="relu")(const_output)
 

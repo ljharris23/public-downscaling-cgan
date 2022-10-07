@@ -3,7 +3,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import concatenate, Conv2D, Dense, GlobalAveragePooling2D
 from tensorflow.keras.layers import Input, LeakyReLU, UpSampling2D
 
-from blocks import residual_block, const_upscale_block_100
+from blocks import residual_block, const_upscale_block
 
 
 def generator(mode,
@@ -31,7 +31,7 @@ def generator(mode,
     print(f"constants_input shape: {const_input.shape}")
 
     # Convolve constant fields down to match other input dimensions
-    upscaled_const_input = const_upscale_block_100(const_input, filters=filters_gen)
+    upscaled_const_input = const_upscale_block(const_input, filters=filters_gen)
     print(f"upscaled constants shape: {upscaled_const_input.shape}")
 
     if mode in ('det', 'VAEGAN'):
@@ -132,7 +132,7 @@ def discriminator(arch,
     print(f"generator_output shape: {generator_output.shape}")
 
     # convolve down constant fields to match ERA
-    lo_res_const_input = const_upscale_block_100(const_input, filters=filters_disc)
+    lo_res_const_input = const_upscale_block(const_input, filters=filters_disc)
     print(f"upscaled constants shape: {lo_res_const_input.shape}")
 
     # concatenate constants to lo-res input
