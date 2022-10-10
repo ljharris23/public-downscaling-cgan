@@ -54,8 +54,7 @@ def calculate_roc(*,
 
     precip_values = np.array([0.1, 0.5, 2.0, 5.0])
 
-    pooling_methods = ['no_pooling', 'max_4', 'max_16', 'max_10_no_overlap', 'avg_4', 'avg_16', 'avg_10_no_overlap']
-    # full list: ['no_pooling', 'max_4', 'max_16', 'max_10_no_overlap', 'avg_4', 'avg_16', 'avg_10_no_overlap']
+    pooling_methods = ['no_pooling', 'max_4', 'max_16', 'avg_4', 'avg_16']
 
     # initialise model
     model = setupmodel.setup_model(mode=mode,

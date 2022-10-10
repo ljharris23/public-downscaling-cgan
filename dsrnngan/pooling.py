@@ -10,10 +10,8 @@ def pool(x, pool_type, data_format='channels_last'):
     pool_op = {
         'max_4': MaxPool2D(pool_size=(4, 4), strides=(2, 2), data_format=data_format),
         'max_16': MaxPool2D(pool_size=(16, 16), strides=(4, 4), data_format=data_format),
-        'max_10_no_overlap': MaxPool2D(pool_size=(10, 10), strides=(10, 10), data_format=data_format),
         'avg_4': AvgPool2D(pool_size=(4, 4), strides=(2, 2), data_format=data_format),
         'avg_16': AvgPool2D(pool_size=(16, 16), strides=(4, 4), data_format=data_format),
-        'avg_10_no_overlap': AvgPool2D(pool_size=(10, 10), strides=(10, 10), data_format=data_format),
     }[pool_type]
 
     return pool_op(x.astype("float32")).numpy()

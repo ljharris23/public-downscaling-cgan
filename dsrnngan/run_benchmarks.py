@@ -62,11 +62,9 @@ pooling_methods = ['no_pooling']
 if args.max_pooling:
     pooling_methods.append('max_4')
     pooling_methods.append('max_16')
-    # pooling_methods.append('max_10_no_overlap')
 if args.avg_pooling:
     pooling_methods.append('avg_4')
     pooling_methods.append('avg_16')
-    # pooling_methods.append('avg_10_no_overlap')
 
 # log_line(log_fname, "Number of samples {}".format(num_batches))
 # log_line(log_fname, "Evaluation year {}".format(predict_year))
@@ -135,11 +133,9 @@ for benchmark in benchmark_methods:
     if not args.max_pooling:
         crps_scores[benchmark]['max_4'] = np.nan
         crps_scores[benchmark]['max_16'] = np.nan
-        # crps_scores[benchmark]['max_10_no_overlap'] = np.nan
     if not args.avg_pooling:
         crps_scores[benchmark]['avg_4'] = np.nan
         crps_scores[benchmark]['avg_16'] = np.nan
-        # crps_scores[benchmark]['avg_10_no_overlap'] = np.nan
     log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}"
              .format(benchmark,
                      np.array(crps_scores[benchmark]['no_pooling']).mean(),
@@ -147,8 +143,6 @@ for benchmark in benchmark_methods:
                      np.array(crps_scores[benchmark]['max_4']).mean(),
                      np.array(crps_scores[benchmark]['avg_16']).mean(),
                      np.array(crps_scores[benchmark]['max_16']).mean(),
-                     # np.array(crps_scores[benchmark]['max_10_no_overlap']).mean(),
-                     # np.array(crps_scores[benchmark]['avg_10_no_overlap']).mean(),
                      np.sqrt(np.array(mse_scores[benchmark]).mean()),
                      np.sqrt(np.array(emmse_scores[benchmark]).mean()),
                      np.array(mae_scores[benchmark]).mean(),
