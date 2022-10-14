@@ -23,23 +23,12 @@ def setup_inputs(*,
                  arch,
                  val_years,
                  downsample,
-                 weights,
                  input_channels,
-                 batch_size,
-                 num_batches,
                  filters_gen,
                  filters_disc,
                  noise_channels,
                  latent_variables,
-                 padding,
-                 load_full_image):
-
-    if load_full_image:
-        # small batch size to prevent memory issues
-        batch_size = 1
-    else:
-        batch_size = batch_size
-        num_batches = num_batches
+                 padding):
 
     # initialise model
     model = setupmodel.setup_model(mode=mode,
@@ -53,24 +42,14 @@ def setup_inputs(*,
 
     gen = model.gen
 
-    if load_full_image:
-        print('Loading full sized image dataset')
-        # load full size image
-        _, batch_gen_valid = setupdata.setup_data(
-            load_full_image=True,
-            val_years=val_years,
-            batch_size=batch_size,
-            downsample=downsample)
-    else:
-        print('Evaluating with smaller image dataset')
-        _, batch_gen_valid = setupdata.setup_data(
-            load_full_image=False,
-            val_years=val_years,
-            val_size=batch_size*num_batches,
-            downsample=downsample,
-            weights=weights,
-            batch_size=batch_size)
-    return (gen, batch_gen_valid)
+    # always uses full-sized images
+    print('Loading full sized image dataset')
+    _, batch_gen_valid = setupdata.setup_data(
+        load_full_image=True,
+        val_years=val_years,
+        batch_size=1,
+        downsample=downsample)
+    return gen, batch_gen_valid
 
 
 def _init_VAEGAN(gen, batch_gen, load_full_image, batch_size, latent_variables):
@@ -116,7 +95,6 @@ def ensemble_ranks(*,
                    rank_samples=100,
                    noise_factor=None,
                    normalize_ranks=True,
-                   load_full_image=False,
                    max_pooling=False,
                    avg_pooling=False,
                    show_progress=True):
@@ -146,15 +124,11 @@ def ensemble_ranks(*,
 
     for k in range(num_batches):
         # load truth images
-        if load_full_image:
-            inputs, outputs = next(batch_gen_iter)
-            cond = inputs['lo_res_inputs']
-            const = inputs['hi_res_inputs']
-            sample_truth = outputs['output']
-            sample_truth = np.expand_dims(np.array(sample_truth), axis=-1)  # must be 4D tensor for pooling NHWC
-        else:
-            cond, const, sample = next(batch_gen_iter)
-            sample_truth = sample.numpy()
+        inputs, outputs = next(batch_gen_iter)
+        cond = inputs['lo_res_inputs']
+        const = inputs['hi_res_inputs']
+        sample_truth = outputs['output']
+        sample_truth = np.expand_dims(np.array(sample_truth), axis=-1)  # must be 4D tensor for pooling NHWC
         if denormalise_data:
             sample_truth = data.denormalise(sample_truth)
         if add_noise:
@@ -271,7 +245,6 @@ def rank_metrics_by_time(*,
                          weights=None,
                          add_noise=True,
                          noise_factor=None,
-                         load_full_image=False,
                          model_numbers=None,
                          ranks_to_save=None,
                          batch_size=None,
@@ -286,20 +259,16 @@ def rank_metrics_by_time(*,
                          max_pooling=False,
                          avg_pooling=False):
 
-    (gen, batch_gen_valid) = setup_inputs(mode=mode,
-                                          arch=arch,
-                                          val_years=val_years,
-                                          downsample=downsample,
-                                          weights=weights,
-                                          input_channels=input_channels,
-                                          batch_size=batch_size,
-                                          num_batches=num_batches,
-                                          filters_gen=filters_gen,
-                                          filters_disc=filters_disc,
-                                          noise_channels=noise_channels,
-                                          latent_variables=latent_variables,
-                                          padding=padding,
-                                          load_full_image=load_full_image)
+    gen, batch_gen_valid = setup_inputs(mode=mode,
+                                        arch=arch,
+                                        val_years=val_years,
+                                        downsample=downsample,
+                                        input_channels=input_channels,
+                                        filters_gen=filters_gen,
+                                        filters_disc=filters_disc,
+                                        noise_channels=noise_channels,
+                                        latent_variables=latent_variables,
+                                        padding=padding)
 
     log_line(log_fname, "N OP CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 mean std")
 
@@ -312,7 +281,7 @@ def rank_metrics_by_time(*,
 
         print(gen_weights_file)
         if mode == "VAEGAN":
-            _init_VAEGAN(gen, batch_gen_valid, load_full_image, batch_size, latent_variables)
+            _init_VAEGAN(gen, batch_gen_valid, True, batch_size, latent_variables)
         gen.load_weights(gen_weights_file)
         arrays, crps_scores = ensemble_ranks(mode=mode,
                                              gen=gen,
@@ -324,7 +293,6 @@ def rank_metrics_by_time(*,
                                              add_noise=add_noise,
                                              rank_samples=rank_samples,
                                              noise_factor=noise_factor,
-                                             load_full_image=load_full_image,
                                              max_pooling=max_pooling,
                                              avg_pooling=avg_pooling)
         ranks, lowress, hiress = arrays
@@ -395,7 +363,6 @@ def image_quality(*,
                   batch_size,
                   rank_samples,
                   num_batches=100,
-                  load_full_image=False,
                   denormalise_data=True,
                   show_progress=True):
 
@@ -412,15 +379,11 @@ def image_quality(*,
                                         stateful_metrics=["RMSE"])
 
     for k in range(num_batches):
-        if load_full_image:
-            (inputs, outputs) = next(batch_gen_iter)
-            cond = inputs['lo_res_inputs']
-            const = inputs['hi_res_inputs']
-            truth = outputs['output']
-            truth = np.expand_dims(np.array(truth), axis=-1)
-        else:
-            (cond, const, truth) = next(batch_gen_iter)
-            truth = truth.numpy()
+        inputs, outputs = next(batch_gen_iter)
+        cond = inputs['lo_res_inputs']
+        const = inputs['hi_res_inputs']
+        truth = outputs['output']
+        truth = np.expand_dims(np.array(truth), axis=-1)
 
         if denormalise_data:
             truth = data.denormalise(truth)
@@ -492,7 +455,6 @@ def quality_metrics_by_time(*,
                             weights_dir,
                             downsample=False,
                             weights=None,
-                            load_full_image=False,
                             model_numbers=None,
                             batch_size=None,
                             num_batches=None,
@@ -504,20 +466,16 @@ def quality_metrics_by_time(*,
                             rank_samples=100,
                             padding=None):
 
-    (gen, batch_gen_valid) = setup_inputs(mode=mode,
-                                          arch=arch,
-                                          val_years=val_years,
-                                          downsample=downsample,
-                                          weights=weights,
-                                          input_channels=input_channels,
-                                          batch_size=batch_size,
-                                          num_batches=num_batches,
-                                          filters_gen=filters_gen,
-                                          filters_disc=filters_disc,
-                                          noise_channels=noise_channels,
-                                          latent_variables=latent_variables,
-                                          padding=padding,
-                                          load_full_image=load_full_image)
+    gen, batch_gen_valid = setup_inputs(mode=mode,
+                                        arch=arch,
+                                        val_years=val_years,
+                                        downsample=downsample,
+                                        input_channels=input_channels,
+                                        filters_gen=filters_gen,
+                                        filters_disc=filters_disc,
+                                        noise_channels=noise_channels,
+                                        latent_variables=latent_variables,
+                                        padding=padding)
 
     log_line(log_fname, "Samples per image: {}".format(rank_samples))
     log_line(log_fname, "Initial dates/times: {}, {}".format(batch_gen_valid.dates[0:4], batch_gen_valid.hours[0:4]))
@@ -532,7 +490,7 @@ def quality_metrics_by_time(*,
 
         print(gen_weights_file)
         if mode == "VAEGAN":
-            _init_VAEGAN(gen, batch_gen_valid, load_full_image, batch_size, latent_variables)
+            _init_VAEGAN(gen, batch_gen_valid, True, batch_size, latent_variables)
         gen.load_weights(gen_weights_file)
         imgqualret = image_quality(mode=mode,
                                    gen=gen,
@@ -541,8 +499,7 @@ def quality_metrics_by_time(*,
                                    latent_variables=latent_variables,
                                    batch_size=batch_size,
                                    rank_samples=rank_samples,
-                                   num_batches=num_batches,
-                                   load_full_image=load_full_image)
+                                   num_batches=num_batches)
         mae = imgqualret['mae']
         mse = imgqualret['mse']
         emmse = imgqualret['emmse']

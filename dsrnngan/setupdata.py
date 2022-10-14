@@ -62,7 +62,7 @@ def setup_data(train_years=None,
                batch_size=None,
                load_full_image=False):
 
-    if load_full_image is True:
+    if load_full_image:
         batch_gen_train = None if train_years is None \
             else setup_full_image_dataset(train_years,
                                           batch_size=batch_size,

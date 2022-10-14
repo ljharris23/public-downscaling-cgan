@@ -241,7 +241,6 @@ if __name__ == "__main__":
                                            weights_dir=model_weights_root,
                                            downsample=downsample,
                                            weights=training_weights,
-                                           load_full_image=True,
                                            model_numbers=model_numbers,
                                            batch_size=1,  # do inference 1 at a time, in case of memory issues
                                            num_batches=num_batches,
@@ -263,7 +262,6 @@ if __name__ == "__main__":
                                         weights=training_weights,
                                         add_noise=add_noise,
                                         noise_factor=noise_factor,
-                                        load_full_image=True,
                                         model_numbers=model_numbers,
                                         ranks_to_save=ranks_to_save,
                                         batch_size=1,  # ditto

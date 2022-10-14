@@ -11,7 +11,6 @@ read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 # input parameters
 log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainGAN'; model_numbers = [460800]  # noqa: E702
 val_years = 2020
-load_full_image = True
 
 model_weights_root = os.path.join(log_folder, "models")
 config_path = os.path.join(log_folder, 'setup_params.yaml')
@@ -59,7 +58,6 @@ evaluation.rank_metrics_by_time(mode=mode,
                                 downsample=downsample,
                                 add_noise=add_noise,
                                 noise_factor=noise_factor,
-                                load_full_image=load_full_image,
                                 model_numbers=model_numbers,
                                 ranks_to_save=model_numbers,
                                 batch_size=batch_size,
