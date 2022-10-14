@@ -64,3 +64,19 @@ def set_gpu_mode():
     else:
         # if use_gpu False
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+
+def read_downscaling_factor():
+    df_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downscaling_factor.yaml')
+    try:
+        with open(df_path, 'r') as f:
+            try:
+                df = yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print(e)
+                sys.exit(1)
+            return df
+    except FileNotFoundError as e:
+        print(e)
+        print("downscaling_factor.yaml not found in the main folder.")
+        sys.exit(1)
