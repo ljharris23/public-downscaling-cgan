@@ -1,20 +1,20 @@
-AOPP:
+LOCATION1:
     GENERAL:
-        RADAR_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/NIMROD'
-        FORECAST_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/IFS'
-        CONSTANTS_PATH: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants'
-        CONSTANTS_PATH_ORO: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/constants/topo_local_0.01.nc'
+        RADAR_PATH: '/path/to/radar/data'
+        FORECAST_PATH: '/path/to/forecast/data'
+        CONSTANTS_PATH: '/path/to/constants/data'
+        CONSTANTS_PATH_ORO: '/path/to/constants/data/orography.nc'
 
     TFRecords:
-        tfrecords_path: '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/tfrecordsIFS20'
+        tfrecords_path: '/path/to/tfrecords/folder'
 
 
-ECMWF:
+LOCATION2:
     GENERAL:
-        RADAR_PATH: '/ppdata/NIMROD'
-        FORECAST_PATH: '/ppdata/IFS'
-        CONSTANTS_PATH: '/ppdata/constants'
-        CONSTANTS_PATH_ORO: '/ppdata/constants/topo_local_0.01.nc'
+        RADAR_PATH: '/another/path/to/radar/data'
+        FORECAST_PATH: '/another/path/to/forecast/data'
+        CONSTANTS_PATH: '/another/path/to/constants/data'
+        CONSTANTS_PATH_ORO: '/another/path/to/constants/data/orography.nc'
 
     TFRecords:
-        tfrecords_path: '/ppdata/tfrecordsIFS20'
+        tfrecords_path: '/another/path/to/tfrecords/folder'
