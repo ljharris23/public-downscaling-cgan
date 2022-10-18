@@ -158,7 +158,6 @@ seq_cond = []
 seq_const = []
 dates_save = []
 hours_save = []
-dummy = np.zeros((1, 940, 940))
 data_predict_iter = iter(data_predict)
 for i in range(num_samples):
     (inputs, outputs) = next(data_predict_iter)

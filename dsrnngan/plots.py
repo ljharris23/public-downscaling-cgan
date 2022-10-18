@@ -346,6 +346,7 @@ def plot_fss(fss_files,
              nimg,
              precip_values,
              spatial_scales,
+             full_image_npixels,
              lw=2):
 
     for i in range(len(precip_values)):
@@ -373,7 +374,7 @@ def plot_fss(fss_files,
             plt.semilogx(spatial_scales, y2, ':', color=color, lw=lw)
 
             # obtain base frequency for no-skill and target-skill lines
-            baserate = m1data[1]['fssobj']['sum_obs_sq']/(nimg*940*940)
+            baserate = m1data[1]['fssobj']['sum_obs_sq']/(nimg*full_image_npixels)
             # sanity check that the truth base rate is the same for
             # each model tested -- if not, bug / different batches etc
             if baserate_first is None:
