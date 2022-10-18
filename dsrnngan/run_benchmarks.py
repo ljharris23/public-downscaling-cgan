@@ -10,6 +10,7 @@ from evaluation import rapsd_batch, log_line
 from pooling import pool
 
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
+ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--log_folder', type=str,
@@ -93,9 +94,9 @@ for benchmark in benchmark_methods:
         # pooling requires 4 dimensions NHWC
         sample_truth = np.expand_dims(outp['output'], axis=-1)
         if benchmark == 'nn_interp':
-            sample_benchmark = benchmarks.nn_interp_model(inp['lo_res_inputs'][..., tpidx], 10)
+            sample_benchmark = benchmarks.nn_interp_model(inp['lo_res_inputs'][..., tpidx], ds_fac)
         elif benchmark == 'zeros':
-            sample_benchmark = benchmarks.zeros_model(inp['lo_res_inputs'][..., tpidx], 10)
+            sample_benchmark = benchmarks.zeros_model(inp['lo_res_inputs'][..., tpidx], ds_fac)
         else:
             raise RuntimeError("Benchmark not recognised")
 

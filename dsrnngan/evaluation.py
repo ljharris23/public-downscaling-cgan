@@ -12,10 +12,12 @@ import setupmodel
 from noise import NoiseGenerator
 from pooling import pool
 from rapsd import rapsd
+from read_config import read_downscaling_factor
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 path = os.path.dirname(os.path.abspath(__file__))
+ds_fac = read_downscaling_factor()["downscaling_factor"]
 
 
 def setup_inputs(*,
@@ -182,7 +184,7 @@ def ensemble_ranks(*,
         samples_gen_ranks = samples_gen.reshape((-1, rank_samples))  # unknown batch size/img dims, known number of samples
         rank = np.count_nonzero(sample_truth_ranks[:, None] >= samples_gen_ranks, axis=-1)  # mask array where truth > samples gen, count
         ranks.append(rank)
-        cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), 10, axis=-1), 10, axis=-2)
+        cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1), ds_fac, axis=-2)
         lowress.append(cond_exp.ravel())
         hiress.append(sample_truth.astype(np.float32).ravel())
         del samples_gen_ranks, sample_truth_ranks

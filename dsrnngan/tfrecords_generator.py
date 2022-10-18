@@ -11,6 +11,7 @@ return_dic = True
 
 data_paths = read_config.get_data_paths()
 records_folder = data_paths["TFRecords"]["tfrecords_path"]
+ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
 
 
 def DataGenerator(year, batch_size, repeat=True, downsample=False, weights=None):
@@ -57,8 +58,8 @@ def create_mixed_dataset(year,
 
 def _dataset_downsampler(inputs, outputs):
     image = outputs['output']
-    kernel_tf = tf.constant(0.01, shape=(10, 10, 1, 1), dtype=tf.float32)
-    image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, 10, 10, 1], padding='VALID',
+    kernel_tf = tf.constant(1.0/(ds_fac*ds_fac), shape=(ds_fac, ds_fac, 1, 1), dtype=tf.float32)
+    image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, ds_fac, ds_fac, 1], padding='VALID',
                          name='conv_debug', data_format='NHWC')
     inputs['lo_res_inputs'] = image
     return inputs, outputs
@@ -66,8 +67,8 @@ def _dataset_downsampler(inputs, outputs):
 
 def _dataset_downsampler_list(inputs, constants, outputs):
     image = outputs
-    kernel_tf = tf.constant(0.01, shape=(10, 10, 1, 1), dtype=tf.float32)
-    image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, 10, 10, 1], padding='VALID', name='conv_debug', data_format='NHWC')
+    kernel_tf = tf.constant(1.0/(ds_fac*ds_fac), shape=(ds_fac, ds_fac, 1, 1), dtype=tf.float32)
+    image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, ds_fac, ds_fac, 1], padding='VALID', name='conv_debug', data_format='NHWC')
     inputs = image
     return inputs, constants, outputs
 
@@ -176,7 +177,7 @@ def write_data(year,
     # nim_size = 940
     img_size = 94
 
-    upscaling_factor = 10
+    scaling_factor = ds_fac
 
     nsamples = (img_size//img_chunk_width + 1)**2
     print("Samples per image:", nsamples)
@@ -205,11 +206,11 @@ def write_data(year,
                     idy = random.randint(0, img_size-img_chunk_width)
 
                     radar = sample[1]['output'][k,
-                                                idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
-                                                idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor].flatten()
+                                                idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
+                                                idy*scaling_factor:(idy+img_chunk_width)*scaling_factor].flatten()
                     const = sample[0]['hi_res_inputs'][k,
-                                                       idx*upscaling_factor:(idx+img_chunk_width)*upscaling_factor,
-                                                       idy*upscaling_factor:(idy+img_chunk_width)*upscaling_factor,
+                                                       idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
+                                                       idy*scaling_factor:(idy+img_chunk_width)*scaling_factor,
                                                        :].flatten()
                     forecast = sample[0]['lo_res_inputs'][k,
                                                           idx:idx+img_chunk_width,

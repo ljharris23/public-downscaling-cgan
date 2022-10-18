@@ -42,6 +42,7 @@ from data import get_dates, all_fcst_fields
 from data_generator import DataGenerator as DataGeneratorFull
 from evaluation import _init_VAEGAN
 from noise import NoiseGenerator
+from read_config import read_downscaling_factor
 from tfrecords_generator import create_fixed_dataset
 
 
@@ -62,6 +63,7 @@ def plot_fss_curves(*,
                     ensemble_members,
                     plot_upsample):
 
+    ds_fac = read_downscaling_factor()["downscaling_factor"]
     if problem_type == "normal":
         downsample = False
         input_channels = 9
@@ -213,7 +215,7 @@ def plot_fss_curves(*,
                 # pred_ensemble will be batch_size x ens x H x W
                 if model_number == "nn_interp":
                     pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, tpidx], 1)
-                    pred_ensemble = nn_interp_model(pred_ensemble, 10)
+                    pred_ensemble = nn_interp_model(pred_ensemble, ds_fac)
 
                 else:
                     raise RuntimeError('Unknown model_number {}' % model_number)

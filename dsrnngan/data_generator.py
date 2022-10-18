@@ -1,9 +1,10 @@
-""" Data generator class for batched training of precipitation downscaling network """
+""" Data generator class for full-image evaluation of precipitation downscaling network """
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 
 from data import load_fcst_radar_batch, load_hires_constants, fcst_hours
+import read_config
 
 return_dic = True
 
@@ -44,6 +45,10 @@ class DataGenerator(Sequence):
         self.hour = hour
         self.fcst_norm = fcst_norm
         self.downsample = downsample
+        if self.downsample:
+            # read downscaling factor from file
+            df_dict = read_config.read_downscaling_factor()  # read downscaling params
+            self.ds_factor = df_dict["downscaling_factor"]
         if constants is None:
             self.constants = constants
         elif constants is True:
@@ -56,10 +61,8 @@ class DataGenerator(Sequence):
         return len(self.dates) // self.batch_size
 
     def _dataset_downsampler(self, radar):
-        # radar = tf.convert_to_tensor(radar, dtype=tf.float32)
-        # print(radar.shape)
-        kernel_tf = tf.constant(0.01, shape=(10, 10, 1, 1), dtype=tf.float32)
-        image = tf.nn.conv2d(radar, filters=kernel_tf, strides=[1, 10, 10, 1], padding='VALID',
+        kernel_tf = tf.constant(1.0/(self.ds_factor*self.ds_factor), shape=(self.ds_factor, self.ds_factor, 1, 1), dtype=tf.float32)
+        image = tf.nn.conv2d(radar, filters=kernel_tf, strides=[1, self.ds_factor, self.ds_factor, 1], padding='VALID',
                              name='conv_debug', data_format='NHWC')
         return image
 
@@ -76,6 +79,7 @@ class DataGenerator(Sequence):
             hour=hours_batch,
             norm=self.fcst_norm)
         if self.downsample:
+            # replace forecast data by coarsened radar data!
             data_x_batch = self._dataset_downsampler(data_y_batch[..., np.newaxis])
 
         if self.constants is None:
