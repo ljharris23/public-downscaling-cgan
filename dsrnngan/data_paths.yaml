@@ -3,7 +3,6 @@ LOCATION1:
         RADAR_PATH: '/path/to/radar/data'
         FORECAST_PATH: '/path/to/forecast/data'
         CONSTANTS_PATH: '/path/to/constants/data'
-        CONSTANTS_PATH_ORO: '/path/to/constants/data/orography.nc'
 
     TFRecords:
         tfrecords_path: '/path/to/tfrecords/folder'
@@ -14,7 +13,6 @@ LOCATION2:
         RADAR_PATH: '/another/path/to/radar/data'
         FORECAST_PATH: '/another/path/to/forecast/data'
         CONSTANTS_PATH: '/another/path/to/constants/data'
-        CONSTANTS_PATH_ORO: '/another/path/to/constants/data/orography.nc'
 
     TFRecords:
         tfrecords_path: '/another/path/to/tfrecords/folder'

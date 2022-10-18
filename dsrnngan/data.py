@@ -1,7 +1,10 @@
 """ File for handling data loading and saving. """
+import os
 from datetime import datetime, timedelta
+
 import numpy as np
 import xarray as xr
+
 import read_config
 
 
@@ -9,7 +12,6 @@ data_paths = read_config.get_data_paths()
 RADAR_PATH = data_paths["GENERAL"]["RADAR_PATH"]
 FCST_PATH = data_paths["GENERAL"]["FORECAST_PATH"]
 CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
-CONSTANTS_PATH_ORO = data_paths["GENERAL"]["CONSTANTS_PATH_ORO"]
 
 all_fcst_fields = ['tp', 'cp', 'sp', 'tisr', 'cape', 'tclw', 'tcwv', 'u700', 'v700']
 fcst_hours = np.array(range(24))
@@ -27,7 +29,8 @@ def get_dates(year):
     Return dates where we have radar data
     """
     from glob import glob
-    files = glob(f"{RADAR_PATH}/{year}/*.nc")
+    file_paths = os.path.join(RADAR_PATH, year, "*.nc")
+    files = glob(file_paths)
     dates = []
     for f in files:
         dates.append(f[:-3].split('_')[-1])
@@ -36,7 +39,8 @@ def get_dates(year):
 
 def load_radar(date, hour, log_precip=False, aggregate=1):
     year = date[:4]
-    data = xr.open_dataset(f"{RADAR_PATH}/{year}/metoffice-c-band-rain-radar_uk_{date}.nc")
+    data_path = os.path.join(RADAR_PATH, year, f"metoffice-c-band-rain-radar_uk_{date}.nc")
+    data = xr.open_dataset(data_path)
     assert hour+aggregate < 25
     y = np.array(data['unknown'][hour:hour+aggregate, :, :]).sum(axis=0)
     data.close()
@@ -56,7 +60,8 @@ def logprec(y, log_precip=True):
 
 
 def load_hires_constants(batch_size=1):
-    df = xr.load_dataset(CONSTANTS_PATH_ORO)
+    oro_path = os.path.join(CONSTANTS_PATH, "orography.nc")
+    df = xr.load_dataset(oro_path)
     # LSM is already 0:1
     lsm = np.array(df['LSM'])
 
@@ -77,7 +82,7 @@ def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=F
 
     if type(hour) == str:
         if hour == 'random':
-            hours = fcst_hours[np.random.randint(22, size=[len(batch_dates)])]
+            hours = fcst_hours[np.random.randint(len(fcst_hours), size=[len(batch_dates)])]
         else:
             assert False, f"Not configured for {hour}"
     elif np.issubdtype(type(hour), np.integer):
@@ -129,7 +134,8 @@ def load_fcst(ifield, date, hour, log_precip=False, norm=False):
     else:
         fleheader = 'sfc'
 
-    ds = xr.open_dataset(f"{FCST_PATH}/{fleheader}_{loaddata_str}.nc")
+    ds_path = os.path.join(FCST_PATH, f"{fleheader}_{loaddata_str}.nc")
+    ds = xr.open_dataset(ds_path)
     data = ds[field]
     field = ifield
     if field in ['tp', 'cp', 'cdir', 'tisr']:
@@ -211,14 +217,16 @@ def gen_fcst_norm(year=2018):
             stats_dic[f] = [0, max(-stats[0], stats[1])]
         else:
             stats_dic[f] = [0, stats[1]]
-    with open(f'{CONSTANTS_PATH}/FCSTNorm{year}.pkl', 'wb') as f:
+    fcstnorm_path = os.path.join(CONSTANTS_PATH, f"FCSTNorm{year}.pkl")
+    with open(fcstnorm_path, 'wb') as f:
         pickle.dump(stats_dic, f, 0)
     return
 
 
 def load_fcst_norm(year=2018):
     import pickle
-    with open(f'{CONSTANTS_PATH}/FCSTNorm{year}.pkl', 'rb') as f:
+    fcstnorm_path = os.path.join(CONSTANTS_PATH, f"FCSTNorm{year}.pkl")
+    with open(fcstnorm_path, 'rb') as f:
         return pickle.load(f)
 
 
