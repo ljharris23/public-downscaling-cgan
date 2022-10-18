@@ -18,6 +18,7 @@ import train
 
 if __name__ == "__main__":
     read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
+    df_dict = read_config.read_downscaling_factor()  # read downscaling params
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="Path to configuration file")
@@ -128,6 +129,7 @@ if __name__ == "__main__":
         model = setupmodel.setup_model(
             mode=mode,
             arch=arch,
+            downscaling_steps=df_dict["steps"],
             input_channels=input_channels,
             latent_variables=latent_variables,
             filters_gen=filters_gen,

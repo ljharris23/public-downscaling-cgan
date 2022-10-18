@@ -11,6 +11,7 @@ from vaegantrain import VAE
 def setup_model(*,
                 mode=None,
                 arch=None,
+                downscaling_steps=None,
                 input_channels=None,
                 filters_gen=None,
                 filters_disc=None,
@@ -38,11 +39,13 @@ def setup_model(*,
     if mode == 'GAN':
         gen = gen_to_use(mode=mode,
                          arch=arch,
+                         downscaling_steps=downscaling_steps,
                          input_channels=input_channels,
                          noise_channels=noise_channels,
                          filters_gen=filters_gen,
                          padding=padding)
         disc = disc_to_use(arch=arch,
+                           downscaling_steps=downscaling_steps,
                            input_channels=input_channels,
                            filters_disc=filters_disc,
                            padding=padding)
@@ -53,11 +56,13 @@ def setup_model(*,
     elif mode == 'VAEGAN':
         (encoder, decoder) = gen_to_use(mode=mode,
                                         arch=arch,
+                                        downscaling_steps=downscaling_steps,
                                         input_channels=input_channels,
                                         latent_variables=latent_variables,
                                         filters_gen=filters_gen,
                                         padding=padding)
         disc = disc_to_use(arch=arch,
+                           downscaling_steps=downscaling_steps,
                            input_channels=input_channels,
                            filters_disc=filters_disc,
                            padding=padding)
@@ -70,6 +75,7 @@ def setup_model(*,
     elif mode == 'det':
         gen = gen_to_use(mode=mode,
                          arch=arch,
+                         downscaling_steps=downscaling_steps,
                          input_channels=input_channels,
                          filters_gen=filters_gen,
                          padding=padding)

@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import yaml
@@ -75,6 +76,7 @@ def read_downscaling_factor():
             except yaml.YAMLError as e:
                 print(e)
                 sys.exit(1)
+            assert math.prod(df["steps"]) == df["downscaling_factor"], "downscaling factor steps do not multiply to total downscaling factor!"
             return df
     except FileNotFoundError as e:
         print(e)

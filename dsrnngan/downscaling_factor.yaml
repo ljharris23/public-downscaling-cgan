@@ -1,2 +1,2 @@
 downscaling_factor: 10  # increase in image size in each dimension
-steps: [2, 5]  # list of integers that multiply to the downscaling factor; the generator will use UpSampling2D layers of these sizes, alternating with residual blocks.
+steps: [5, 2]  # list of integers that multiply to the downscaling factor; the generator will use UpSampling2D layers of these sizes, alternating with residual blocks.
