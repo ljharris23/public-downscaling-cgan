@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Layer, Add, Conv2D, Dropout, LeakyReLU, BatchNormalization, AveragePooling2D
+from tensorflow.keras.layers import Layer, Add, Conv2D, LeakyReLU, BatchNormalization, AveragePooling2D
 
 from layers import ReflectionPadding2D, SymmetricPadding2D
 
@@ -38,7 +38,7 @@ class Conv2DPadding(Layer):
             return self.convsam(x)
 
 
-def residual_block(x, filters, conv_size=(3, 3), stride=1, relu_alpha=0.2, norm=None, dropout_rate=None, padding=None, force_1d_conv=False):
+def residual_block(x, filters, conv_size=(3, 3), stride=1, relu_alpha=0.2, norm=None, padding=None, force_1d_conv=False):
     in_channels = int(x.shape[-1])
     x_in = x
 
@@ -55,9 +55,6 @@ def residual_block(x, filters, conv_size=(3, 3), stride=1, relu_alpha=0.2, norm=
         pass
     else:
         print("norm type not implemented")
-    if dropout_rate is not None:
-        x = Dropout(dropout_rate)(x)
-        print("Dropout rate is {dropout_rate}")
 
     # second block of activation and 3x3 convolution
     x = LeakyReLU(relu_alpha)(x)
@@ -68,9 +65,6 @@ def residual_block(x, filters, conv_size=(3, 3), stride=1, relu_alpha=0.2, norm=
         pass
     else:
         print("norm type not implemented")
-    if dropout_rate is not None:
-        x = Dropout(dropout_rate)(x)
-        print("Dropout rate is {dropout_rate}")
 
     # skip connection
     x = Add()([x, x_in])
