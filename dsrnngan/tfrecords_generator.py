@@ -1,4 +1,5 @@
 import glob
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -104,11 +105,13 @@ def create_dataset(year,
                    repeat=True):
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     if isinstance(year, (str, int)):
-        fl = glob.glob(f"{folder}/{year}_*.{clss}.tfrecords")
+        fpattern = os.path.join(folder, f"{year}_*.{clss}.tfrecords")
+        fl = glob.glob(fpattern)
     elif isinstance(year, list):
         fl = []
         for y in year:
-            fl += glob.glob(f"{folder}/{y}_*.{clss}.tfrecords")
+            fpattern = os.path.join(folder, f"{y}_*.{clss}.tfrecords")
+            fl += glob.glob(fpattern)
     else:
         assert False, f"TFRecords not configure for type {type(year)}"
     files_ds = tf.data.Dataset.list_files(fl)
@@ -135,13 +138,10 @@ def create_fixed_dataset(year=None,
                          name=None,
                          folder=records_folder):
     assert year is not None or name is not None, "Must specify year or file name"
-    if folder[-1] != '/':
-        folder = folder + '/'
     if name is None:
-        name = f"{folder}{mode}{year}.tfrecords"
+        name = os.path.join(folder, f"{mode}{year}.tfrecords")
     else:
-        if name[0] != '/':
-            name = folder + name
+        name = os.path.join(folder, name)
     fl = glob.glob(name)
     files_ds = tf.data.Dataset.list_files(fl)
     ds = tf.data.TFRecordDataset(files_ds,
@@ -194,7 +194,7 @@ def write_data(year,
                             fcst_norm=fcst_norm)
         fle_hdles = []
         for fh in range(num_class):
-            flename = f"{records_folder}{year}_{hour}.{fh}.tfrecords"
+            flename = os.path.join(records_folder, f"{year}_{hour}.{fh}.tfrecords")
             fle_hdles.append(tf.io.TFRecordWriter(flename))
         for batch in range(len(dates)):
             print(hour, batch)
@@ -233,7 +233,7 @@ def write_data(year,
 def save_dataset(tfrecords_dataset, flename, max_batches=None):
 
     assert return_dic, "Only works with return_dic=True"
-    flename = f"{records_folder}/{flename}"
+    flename = os.path.join(records_folder, flename)
     fle_hdle = tf.io.TFRecordWriter(flename)
     for ii, sample in enumerate(tfrecords_dataset):
         print(ii)
