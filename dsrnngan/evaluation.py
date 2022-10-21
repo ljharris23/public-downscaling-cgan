@@ -273,7 +273,7 @@ def rank_metrics_by_time(*,
     log_line(log_fname, "N OP CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 mean std")
 
     for model_number in model_numbers:
-        gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
+        gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
 
         if not os.path.isfile(gen_weights_file):
             print(gen_weights_file, "not found, skipping")
@@ -313,9 +313,7 @@ def rank_metrics_by_time(*,
         mean = ranks.mean()
         std = ranks.std()
 
-        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}".format(
-            model_number, OP, CRPS_no_pool, CRPS_max_4, CRPS_max_16,
-            CRPS_avg_4, CRPS_avg_16, mean, std))
+        log_line(log_fname, f"{model_number} {OP:.6f} {CRPS_no_pool:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {mean:.6f} {std:.6f}")
 
         # save one directory up from model weights, in same dir as logfile
         ranks_folder = os.path.dirname(log_fname)
@@ -480,12 +478,12 @@ def quality_metrics_by_time(*,
                                         latent_variables=latent_variables,
                                         padding=padding)
 
-    log_line(log_fname, "Samples per image: {}".format(rank_samples))
-    log_line(log_fname, "Initial dates/times: {}, {}".format(batch_gen_valid.dates[0:4], batch_gen_valid.hours[0:4]))
+    log_line(log_fname, f"Samples per image: {rank_samples}")
+    log_line(log_fname, f"Initial dates/times: {batch_gen_valid.dates[0:4]}, {batch_gen_valid.hours[0:4]}")
     log_line(log_fname, "N RMSE EMRMSE RAPSD MAE")
 
     for model_number in model_numbers:
-        gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
+        gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
 
         if not os.path.isfile(gen_weights_file):
             print(gen_weights_file, "not found, skipping")
@@ -508,9 +506,4 @@ def quality_metrics_by_time(*,
         emmse = imgqualret['emmse']
         rapsd = imgqualret['rapsd']
 
-        log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f}".format(
-            model_number,
-            np.sqrt(mse.mean()),
-            np.sqrt(emmse.mean()),
-            np.nanmean(rapsd),
-            mae.mean()))
+        log_line(log_fname, f"{model_number} {np.sqrt(mse.mean()):.6f} {np.sqrt(emmse.mean()):.6f} {np.nanmean(rapsd):.6f} {mae.mean():.6f}")
