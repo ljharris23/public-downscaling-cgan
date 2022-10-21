@@ -34,7 +34,10 @@ def calculate_roc(*,
                   ensemble_members,
                   calc_upsample):
 
-    ds_fac = read_downscaling_factor()["downscaling_factor"]
+    df_dict = read_downscaling_factor()
+    ds_fac = df_dict["downscaling_factor"]
+    downscaling_steps = df_dict["steps"]
+
     if problem_type == "normal":
         downsample = False
         input_channels = 9
@@ -61,6 +64,7 @@ def calculate_roc(*,
     # initialise model
     model = setupmodel.setup_model(mode=mode,
                                    arch=arch,
+                                   downscaling_steps=downscaling_steps,
                                    input_channels=input_channels,
                                    filters_gen=filters_gen,
                                    filters_disc=filters_disc,

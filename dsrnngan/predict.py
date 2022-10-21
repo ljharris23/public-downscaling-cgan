@@ -23,6 +23,7 @@ from setupmodel import setup_model
 from tfrecords_generator import create_fixed_dataset
 
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
+downscaling_steps = read_config.read_downscaling_factor()["steps"]
 
 # plotting parameters
 value_range_precip = (0.1, 15)
@@ -130,6 +131,7 @@ else:
 # initialise model
 model = setup_model(mode=mode,
                     arch=arch,
+                    downscaling_steps=downscaling_steps,
                     input_channels=input_channels,
                     filters_gen=filters_gen,
                     filters_disc=filters_disc,

@@ -7,22 +7,23 @@ from tensorflow.python.keras.utils import generic_utils
 
 import crps
 import data
+import read_config
 import setupdata
 import setupmodel
 from noise import NoiseGenerator
 from pooling import pool
 from rapsd import rapsd
-from read_config import read_downscaling_factor
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 path = os.path.dirname(os.path.abspath(__file__))
-ds_fac = read_downscaling_factor()["downscaling_factor"]
+ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
 
 
 def setup_inputs(*,
                  mode,
                  arch,
+                 downscaling_steps,
                  val_years,
                  downsample,
                  input_channels,
@@ -35,6 +36,7 @@ def setup_inputs(*,
     # initialise model
     model = setupmodel.setup_model(mode=mode,
                                    arch=arch,
+                                   downscaling_steps=downscaling_steps,
                                    input_channels=input_channels,
                                    filters_gen=filters_gen,
                                    filters_disc=filters_disc,
@@ -261,8 +263,11 @@ def rank_metrics_by_time(*,
                          max_pooling=False,
                          avg_pooling=False):
 
+    df_dict = read_config.read_downscaling_factor()
+
     gen, batch_gen_valid = setup_inputs(mode=mode,
                                         arch=arch,
+                                        downscaling_steps=df_dict["steps"],
                                         val_years=val_years,
                                         downsample=downsample,
                                         input_channels=input_channels,
@@ -468,8 +473,11 @@ def quality_metrics_by_time(*,
                             rank_samples=100,
                             padding=None):
 
+    df_dict = read_config.read_downscaling_factor()
+
     gen, batch_gen_valid = setup_inputs(mode=mode,
                                         arch=arch,
+                                        downscaling_steps=df_dict["steps"],
                                         val_years=val_years,
                                         downsample=downsample,
                                         input_channels=input_channels,
