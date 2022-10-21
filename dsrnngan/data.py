@@ -29,7 +29,7 @@ def get_dates(year):
     Return dates where we have radar data
     """
     from glob import glob
-    file_paths = os.path.join(RADAR_PATH, year, "*.nc")
+    file_paths = os.path.join(RADAR_PATH, str(year), "*.nc")
     files = glob(file_paths)
     dates = []
     for f in files:
