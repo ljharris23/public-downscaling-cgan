@@ -77,13 +77,6 @@ def _init_VAEGAN(gen, batch_gen, load_full_image, batch_size, latent_variables):
     return
 
 
-def randomize_nans(x, rnd_mean, rnd_range):
-    nan_mask = np.isnan(x)
-    nan_shape = x[nan_mask].shape
-    x[nan_mask] = rnd_mean + \
-        (np.random.rand(*nan_shape)-0.5)*rnd_range
-
-
 def ensemble_ranks(*,
                    mode,
                    gen,
