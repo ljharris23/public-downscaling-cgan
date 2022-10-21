@@ -32,18 +32,15 @@ if __name__ == "__main__":
     group.add_argument('--eval_short', dest='evalnum', action='store_const', const="short")
     group.add_argument('--eval_blitz', dest='evalnum', action='store_const', const="blitz")
     parser.set_defaults(evalnum=None)
-    parser.set_defaults(rank=False)
-    parser.set_defaults(qual=False)
+    parser.set_defaults(evaluate=False)
     parser.set_defaults(plot_ranks=False)
-    parser.add_argument('--rank', dest='rank', action='store_true',
-                        help="Include CRPS/rank evaluation on full-size images")
-    parser.add_argument('--qual', dest='qual', action='store_true',
-                        help="Include image quality metrics on full-size images")
+    parser.add_argument('--evaluate', dest='evaluate', action='store_true',
+                        help="Include evaluation on full-size images")
     parser.add_argument('--plot_ranks', dest='plot_ranks', action='store_true',
                         help="Plot rank histograms")
     args = parser.parse_args()
 
-    if args.evalnum is None and (args.rank or args.qual):
+    if args.evaluate and args.evalnum is None:
         raise RuntimeError("You asked for evaluation to occur, but did not pass in '--eval_full', '--eval_short', or '--eval_blitz' to specify length of evaluation")
 
     # Read in the configurations
@@ -81,7 +78,7 @@ if __name__ == "__main__":
     content_loss_weight = setup_params["TRAIN"]["content_loss_weight"]
     val_years = setup_params["VAL"]["val_years"]
     val_size = setup_params["VAL"]["val_size"]
-    num_batches = setup_params["EVAL"]["num_batches"]
+    num_images = setup_params["EVAL"]["num_batches"]
     add_noise = setup_params["EVAL"]["add_postprocessing_noise"]
     noise_factor = setup_params["EVAL"]["postprocessing_noise_factor"]
     max_pooling = setup_params["EVAL"]["max_pooling"]
@@ -235,48 +232,25 @@ if __name__ == "__main__":
         model_numbers = np.arange(0, num_samples + 1, interval)[1:].tolist()
 
     # evaluate model performance
-    if args.qual:
-        evaluation.quality_metrics_by_time(mode=mode,
-                                           arch=arch,
-                                           val_years=val_years,
-                                           log_fname=qual_fname,
-                                           weights_dir=model_weights_root,
-                                           downsample=downsample,
-                                           weights=training_weights,
-                                           model_numbers=model_numbers,
-                                           batch_size=1,  # do inference 1 at a time, in case of memory issues
-                                           num_batches=num_batches,
-                                           filters_gen=filters_gen,
-                                           filters_disc=filters_disc,
-                                           input_channels=input_channels,
-                                           latent_variables=latent_variables,
-                                           noise_channels=noise_channels,
-                                           rank_samples=2,
-                                           padding=padding)
-
-    if args.rank:
-        evaluation.rank_metrics_by_time(mode=mode,
-                                        arch=arch,
-                                        val_years=val_years,
-                                        log_fname=rank_fname,
-                                        weights_dir=model_weights_root,
-                                        downsample=downsample,
-                                        weights=training_weights,
-                                        add_noise=add_noise,
-                                        noise_factor=noise_factor,
-                                        model_numbers=model_numbers,
-                                        ranks_to_save=ranks_to_save,
-                                        batch_size=1,  # ditto
-                                        num_batches=num_batches,
-                                        filters_gen=filters_gen,
-                                        filters_disc=filters_disc,
-                                        input_channels=input_channels,
-                                        latent_variables=latent_variables,
-                                        noise_channels=noise_channels,
-                                        padding=padding,
-                                        rank_samples=10,
-                                        max_pooling=max_pooling,
-                                        avg_pooling=avg_pooling)
+    if args.evaluate:
+        evaluation.evaluate_multiple_checkpoints(mode=mode,
+                                                 arch=arch,
+                                                 val_years=val_years,
+                                                 log_fname=rank_fname,
+                                                 weights_dir=model_weights_root,
+                                                 downsample=downsample,
+                                                 add_noise=add_noise,
+                                                 noise_factor=noise_factor,
+                                                 model_numbers=model_numbers,
+                                                 ranks_to_save=ranks_to_save,
+                                                 num_images=num_images,
+                                                 filters_gen=filters_gen,
+                                                 filters_disc=filters_disc,
+                                                 input_channels=input_channels,
+                                                 latent_variables=latent_variables,
+                                                 noise_channels=noise_channels,
+                                                 padding=padding,
+                                                 ensemble_size=10)
 
     if args.plot_ranks:
         plots.plot_histograms(log_folder, val_years, ranks=ranks_to_save, N_ranks=11)

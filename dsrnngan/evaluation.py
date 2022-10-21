@@ -48,25 +48,25 @@ def setup_inputs(*,
 
     # always uses full-sized images
     print('Loading full sized image dataset')
-    _, batch_gen_valid = setupdata.setup_data(
+    _, data_gen_valid = setupdata.setup_data(
         load_full_image=True,
         val_years=val_years,
         batch_size=1,
         downsample=downsample)
-    return gen, batch_gen_valid
+    return gen, data_gen_valid
 
 
-def _init_VAEGAN(gen, batch_gen, load_full_image, batch_size, latent_variables):
+def _init_VAEGAN(gen, data_gen, load_full_image, batch_size, latent_variables):
     if False:
         # this runs the model on one batch, which is what the internet says
         # but this doesn't actually seem to be necessary?!
-        batch_gen_iter = iter(batch_gen)
+        data_gen_iter = iter(data_gen)
         if load_full_image:
-            inputs, outputs = next(batch_gen_iter)
+            inputs, outputs = next(data_gen_iter)
             cond = inputs['lo_res_inputs']
             const = inputs['hi_res_inputs']
         else:
-            cond, const, _ = next(batch_gen_iter)
+            cond, const, _ = next(data_gen_iter)
 
         noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
         noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
@@ -77,71 +77,61 @@ def _init_VAEGAN(gen, batch_gen, load_full_image, batch_size, latent_variables):
     return
 
 
-def ensemble_ranks(*,
+def eval_one_chkpt(*,
                    mode,
                    gen,
-                   batch_gen,
+                   data_gen,
                    noise_channels,
                    latent_variables,
-                   batch_size,
-                   num_batches,
-                   noise_offset=0.0,
-                   noise_mul=1.0,
+                   num_images,
+                   add_noise,
+                   ensemble_size,
+                   noise_factor,
                    denormalise_data=True,
-                   add_noise=True,
-                   rank_samples=100,
-                   noise_factor=None,
                    normalize_ranks=True,
-                   max_pooling=False,
-                   avg_pooling=False,
                    show_progress=True):
 
     ranks = []
     lowress = []
     hiress = []
     crps_scores = {}
-    batch_gen_iter = iter(batch_gen)
+    mae_all = []
+    mse_all = []
+    emmse_all = []
+    ralsd_all = []
+
+    data_gen_iter = iter(data_gen)
     tpidx = data.all_fcst_fields.index('tp')
+    batch_size = 1  # do one full-size image at a time
 
     if mode == "det":
-        rank_samples = 1  # can't generate an ensemble deterministically
+        ensemble_size = 1  # can't generate an ensemble deterministically
 
     if show_progress:
-        # Initialize progbar and batch counter
-        progbar = generic_utils.Progbar(
-            num_batches)
+        # Initialize progbar
+        progbar = generic_utils.Progbar(num_images,
+                                        stateful_metrics=("CRPS", "EM-MSE"))
 
-    pooling_methods = ['no_pooling']
-    if max_pooling:
-        pooling_methods.append('max_4')
-        pooling_methods.append('max_16')
-    if avg_pooling:
-        pooling_methods.append('avg_4')
-        pooling_methods.append('avg_16')
+    CRPS_pooling_methods = ['no_pooling', 'max_4', 'max_16', 'avg_4', 'avg_16']
+    rng = np.random.default_rng()
 
-    for k in range(num_batches):
+    for kk in range(num_images):
         # load truth images
-        inputs, outputs = next(batch_gen_iter)
+        inputs, outputs = next(data_gen_iter)
         cond = inputs['lo_res_inputs']
         const = inputs['hi_res_inputs']
-        sample_truth = outputs['output']
-        sample_truth = np.expand_dims(np.array(sample_truth), axis=-1)  # must be 4D tensor for pooling NHWC
+        truth = outputs['output']
+        truth = np.expand_dims(np.array(truth), axis=-1)  # must be 4D tensor for pooling NHWC
         if denormalise_data:
-            sample_truth = data.denormalise(sample_truth)
-        if add_noise:
-            noise_dim_1, noise_dim_2 = sample_truth[0, ..., 0].shape
-            noise = np.random.rand(batch_size, noise_dim_1, noise_dim_2, 1)*noise_factor
-            sample_truth += noise
+            truth = data.denormalise(truth)
 
         # generate predictions, depending on model type
         samples_gen = []
         if mode == "GAN":
             noise_shape = np.array(cond)[0, ..., 0].shape + (noise_channels,)
             noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-            for i in range(rank_samples):
+            for ii in range(ensemble_size):
                 nn = noise_gen()
-                nn *= noise_mul
-                nn -= noise_offset
                 sample_gen = gen.predict([cond, const, nn])
                 samples_gen.append(sample_gen.astype("float32"))
         elif mode == "det":
@@ -149,74 +139,110 @@ def ensemble_ranks(*,
             samples_gen.append(sample_gen.astype("float32"))
         elif mode == 'VAEGAN':
             # call encoder once
-            (mean, logvar) = gen.encoder([cond, const])
+            mean, logvar = gen.encoder([cond, const])
             noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
             noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-            for i in range(rank_samples):
+            for ii in range(ensemble_size):
                 nn = noise_gen()
-                nn *= noise_mul
-                nn -= noise_offset
                 # generate ensemble of preds with decoder
                 sample_gen = gen.decoder.predict([mean, logvar, nn, const])
                 samples_gen.append(sample_gen.astype("float32"))
-        for ii in range(len(samples_gen)):
-            sample_gen = np.squeeze(samples_gen[ii], axis=-1)  # squeeze out trival dim
-            # sample_gen shape should be [n, h, w] e.g. [1, 940, 940]
+
+        # samples generated, now process them (e.g., undo log transform) and calculate MAE etc
+        for ii in range(ensemble_size):
+            sample_gen = samples_gen[ii]
+            # sample_gen shape should be [n, h, w, c] e.g. [1, 940, 940, 1]
             if denormalise_data:
                 sample_gen = data.denormalise(sample_gen)
-            if add_noise:
-                (noise_dim_1, noise_dim_2) = sample_gen[0, ...].shape
-                noise = np.random.rand(batch_size, noise_dim_1, noise_dim_2)*noise_factor
-                sample_gen += noise
+
+            # Calculate MAE, MSE, RALSD for this sample
+            mae = ((np.abs(truth - sample_gen)).mean(axis=(1, 2)))
+            mse = ((truth - sample_gen)**2).mean(axis=(1, 2))
+            ralsd = ralsd_batch(truth, sample_gen)
+            # ralsd = np.array([0.0])
+            mae_all.append(mae.flatten())
+            mse_all.append(mse.flatten())
+            ralsd_all.append(ralsd.flatten())
+
+            if ii == 0:
+                # reset on first ensemble member
+                ensmean = np.zeros_like(sample_gen)
+            ensmean += sample_gen
+
+            sample_gen = np.squeeze(sample_gen, axis=-1)  # squeeze out trival dim
             samples_gen[ii] = sample_gen
-        # turn list into array
+
+        # Calculate Ensemble Mean MSE
+        ensmean /= ensemble_size
+        emmse = ((truth - ensmean)**2).mean(axis=(1, 2))
+        emmse_all.append(emmse.flatten())
+
+        # turn list of predictions into array
         samples_gen = np.stack(samples_gen, axis=-1)  # shape of samples_gen is [n, h, w, c] e.g. [1, 940, 940, 10]
 
-        # calculate ranks
-        # currently ranks only calculated without pooling
-        # probably fine but may want to threshold in the future, e.g. <1mm, >5mm
-        sample_truth_ranks = sample_truth.ravel()  # unwrap into one long array, then unwrap samples_gen in same format
-        samples_gen_ranks = samples_gen.reshape((-1, rank_samples))  # unknown batch size/img dims, known number of samples
-        rank = np.count_nonzero(sample_truth_ranks[:, None] >= samples_gen_ranks, axis=-1)  # mask array where truth > samples gen, count
-        ranks.append(rank)
-        cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1), ds_fac, axis=-2)
-        lowress.append(cond_exp.ravel())
-        hiress.append(sample_truth.astype(np.float32).ravel())
-        del samples_gen_ranks, sample_truth_ranks
-        gc.collect()
-
         # calculate CRPS scores for different pooling methods
-        for method in pooling_methods:
+        for method in CRPS_pooling_methods:
             if method == 'no_pooling':
-                sample_truth_pooled = sample_truth
+                truth_pooled = truth
                 samples_gen_pooled = samples_gen
             else:
-                sample_truth_pooled = pool(sample_truth, method)
+                truth_pooled = pool(truth, method)
                 samples_gen_pooled = pool(samples_gen, method)
             # crps_ensemble expects truth dims [N, H, W], pred dims [N, H, W, C]
-            crps_score = crps.crps_ensemble(np.squeeze(sample_truth_pooled, axis=-1), samples_gen_pooled).mean()
-            del sample_truth_pooled, samples_gen_pooled
+            crps_score = crps.crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled).mean()
+            del truth_pooled, samples_gen_pooled
             gc.collect()
 
             if method not in crps_scores:
                 crps_scores[method] = []
             crps_scores[method].append(crps_score)
 
+        # calculate ranks; only calculated without pooling
+
+        # Add noise to truth and generated samples to make 0-handling fairer
+        # NOTE truth and sample_gen are 'polluted' after this, hence we do this last
+        if add_noise:
+            truth += rng.random(size=truth.shape, dtype=np.float32)*noise_factor
+            samples_gen += rng.random(size=samples_gen.shape, dtype=np.float32)*noise_factor
+
+        truth_flat = truth.ravel()  # unwrap into one long array, then unwrap samples_gen in same format
+        samples_gen_ranks = samples_gen.reshape((-1, ensemble_size))  # unknown batch size/img dims, known number of samples
+        rank = np.count_nonzero(truth_flat[:, None] >= samples_gen_ranks, axis=-1)  # mask array where truth > samples gen, count
+        ranks.append(rank)
+        # keep track of input and truth rainfall values, to facilitate further ranks processing
+        cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1), ds_fac, axis=-2)
+        lowress.append(cond_exp.ravel())
+        hiress.append(truth.astype(np.float32).ravel())
+        del samples_gen_ranks, truth_flat
+        gc.collect()
+
         if show_progress:
+            emmse_so_far = np.sqrt(np.mean(np.concatenate(emmse_all)))
             crps_mean = np.mean(crps_scores['no_pooling'])
-            losses = [("CRPS", crps_mean)]
+            losses = [("EM-MSE", emmse_so_far), ("CRPS", crps_mean)]
             progbar.add(1, values=losses)
+
+    mae_all = np.concatenate(mae_all)
+    mse_all = np.concatenate(mse_all)
+    emmse_all = np.concatenate(emmse_all)
+    ralsd_all = np.concatenate(ralsd_all)
+
+    other = {}
+    other['mae'] = mae_all
+    other['mse'] = mse_all
+    other['emmse'] = emmse_all
+    other['ralsd'] = ralsd_all
 
     ranks = np.concatenate(ranks)
     lowress = np.concatenate(lowress)
     hiress = np.concatenate(hiress)
     gc.collect()
     if normalize_ranks:
-        ranks = (ranks / rank_samples).astype(np.float32)
+        ranks = (ranks / ensemble_size).astype(np.float32)
         gc.collect()
     arrays = (ranks, lowress, hiress)
 
-    return (arrays, crps_scores)
+    return arrays, crps_scores, other
 
 
 def rank_OP(norm_ranks, num_ranks=100):
@@ -232,45 +258,43 @@ def log_line(log_fname, line):
         print(line, file=f)
 
 
-def rank_metrics_by_time(*,
-                         mode,
-                         arch,
-                         val_years,
-                         log_fname,
-                         weights_dir,
-                         downsample=False,
-                         weights=None,
-                         add_noise=True,
-                         noise_factor=None,
-                         model_numbers=None,
-                         ranks_to_save=None,
-                         batch_size=None,
-                         num_batches=None,
-                         filters_gen=None,
-                         filters_disc=None,
-                         input_channels=None,
-                         latent_variables=None,
-                         noise_channels=None,
-                         padding=None,
-                         rank_samples=None,
-                         max_pooling=False,
-                         avg_pooling=False):
+def evaluate_multiple_checkpoints(*,
+                                  mode,
+                                  arch,
+                                  val_years,
+                                  log_fname,
+                                  weights_dir,
+                                  downsample,
+                                  add_noise,
+                                  noise_factor,
+                                  model_numbers,
+                                  ranks_to_save,
+                                  num_images,
+                                  filters_gen,
+                                  filters_disc,
+                                  input_channels,
+                                  latent_variables,
+                                  noise_channels,
+                                  padding,
+                                  ensemble_size):
 
     df_dict = read_config.read_downscaling_factor()
 
-    gen, batch_gen_valid = setup_inputs(mode=mode,
-                                        arch=arch,
-                                        downscaling_steps=df_dict["steps"],
-                                        val_years=val_years,
-                                        downsample=downsample,
-                                        input_channels=input_channels,
-                                        filters_gen=filters_gen,
-                                        filters_disc=filters_disc,
-                                        noise_channels=noise_channels,
-                                        latent_variables=latent_variables,
-                                        padding=padding)
+    gen, data_gen_valid = setup_inputs(mode=mode,
+                                       arch=arch,
+                                       downscaling_steps=df_dict["steps"],
+                                       val_years=val_years,
+                                       downsample=downsample,
+                                       input_channels=input_channels,
+                                       filters_gen=filters_gen,
+                                       filters_disc=filters_disc,
+                                       noise_channels=noise_channels,
+                                       latent_variables=latent_variables,
+                                       padding=padding)
 
-    log_line(log_fname, "N OP CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 mean std")
+    log_line(log_fname, f"Samples per image: {ensemble_size}")
+    log_line(log_fname, f"Initial dates/times: {data_gen_valid.dates[0:4]}, {data_gen_valid.hours[0:4]}")
+    log_line(log_fname, "N CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 RMSE EMRMSE RALSD MAE OP")
 
     for model_number in model_numbers:
         gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
@@ -281,39 +305,31 @@ def rank_metrics_by_time(*,
 
         print(gen_weights_file)
         if mode == "VAEGAN":
-            _init_VAEGAN(gen, batch_gen_valid, True, batch_size, latent_variables)
+            _init_VAEGAN(gen, data_gen_valid, True, 1, latent_variables)
         gen.load_weights(gen_weights_file)
-        arrays, crps_scores = ensemble_ranks(mode=mode,
+        arrays, crps, other = eval_one_chkpt(mode=mode,
                                              gen=gen,
-                                             batch_gen=batch_gen_valid,
+                                             data_gen=data_gen_valid,
                                              noise_channels=noise_channels,
                                              latent_variables=latent_variables,
-                                             batch_size=batch_size,
-                                             num_batches=num_batches,
+                                             num_images=num_images,
                                              add_noise=add_noise,
-                                             rank_samples=rank_samples,
-                                             noise_factor=noise_factor,
-                                             max_pooling=max_pooling,
-                                             avg_pooling=avg_pooling)
+                                             ensemble_size=ensemble_size,
+                                             noise_factor=noise_factor)
         ranks, lowress, hiress = arrays
         OP = rank_OP(ranks)
-        CRPS_no_pool = np.asarray(crps_scores['no_pooling']).mean()
-        if max_pooling:
-            CRPS_max_4 = np.asarray(crps_scores['max_4']).mean()
-            CRPS_max_16 = np.asarray(crps_scores['max_16']).mean()
-        else:
-            CRPS_max_4 = np.nan
-            CRPS_max_16 = np.nan
-        if avg_pooling:
-            CRPS_avg_4 = np.asarray(crps_scores['avg_4']).mean()
-            CRPS_avg_16 = np.asarray(crps_scores['avg_16']).mean()
-        else:
-            CRPS_avg_4 = np.nan
-            CRPS_avg_16 = np.nan
-        mean = ranks.mean()
-        std = ranks.std()
+        CRPS_pixel = np.asarray(crps['no_pooling']).mean()
+        CRPS_max_4 = np.asarray(crps['max_4']).mean()
+        CRPS_max_16 = np.asarray(crps['max_16']).mean()
+        CRPS_avg_4 = np.asarray(crps['avg_4']).mean()
+        CRPS_avg_16 = np.asarray(crps['avg_16']).mean()
 
-        log_line(log_fname, f"{model_number} {OP:.6f} {CRPS_no_pool:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {mean:.6f} {std:.6f}")
+        mae = other['mae'].mean()
+        rmse = np.sqrt(other['mse'].mean())
+        emrmse = np.sqrt(other['emmse'].mean())
+        ralsd = np.nanmean(other['ralsd'])
+
+        log_line(log_fname, f"{model_number} {CRPS_pixel:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {rmse:.6f} {emrmse:.6f} {ralsd:.6f} {mae:.6f} {OP:.6f}")
 
         # save one directory up from model weights, in same dir as logfile
         ranks_folder = os.path.dirname(log_fname)
@@ -323,8 +339,8 @@ def rank_metrics_by_time(*,
             np.savez_compressed(os.path.join(ranks_folder, fname), ranks=ranks, lowres=lowress, hires=hiress)
 
 
-def calculate_rapsd_rmse(truth, pred):
-    # avoid producing inf values by removing RAPSD calc for images
+def calculate_ralsd_rmse(truth, pred):
+    # avoid producing inf values by removing RALSD calc for images
     # that are mostly zeroes (mean pixel value < 0.01)
     if (truth.mean()) < 0.002 or (pred.mean()) < 0.002:
         return np.nan
@@ -336,174 +352,17 @@ def calculate_rapsd_rmse(truth, pred):
     return rmse
 
 
-def rapsd_batch(batch1, batch2):
+def ralsd_batch(batch1, batch2):
     # radially averaged power spectral density
     # squeeze out final dimension (channels)
-    if len(batch1.shape) == 4:
+    if batch1.ndim == 4:
         batch1 = np.squeeze(batch1, axis=-1)
-    if len(batch2.shape) == 4:
+    if batch2.ndim == 4:
         batch2 = np.squeeze(batch2, axis=-1)
-    rapsd_batch = []
-    for i in range(batch1.shape[0]):
-        rapsd_score = calculate_rapsd_rmse(
-                        batch1[i, ...], batch2[i, ...])
-        if rapsd_score:
-            rapsd_batch.append(rapsd_score)
-    return np.array(rapsd_batch)
-
-
-def image_quality(*,
-                  mode,
-                  gen,
-                  batch_gen,
-                  noise_channels,
-                  latent_variables,
-                  batch_size,
-                  rank_samples,
-                  num_batches=100,
-                  denormalise_data=True,
-                  show_progress=True):
-
-    batch_gen_iter = iter(batch_gen)
-
-    mae_all = []
-    mse_all = []
-    emmse_all = []
-    rapsd_all = []
-
-    if show_progress:
-        # Initialize progbar and batch counter
-        progbar = generic_utils.Progbar(num_batches,
-                                        stateful_metrics=["RMSE"])
-
-    for k in range(num_batches):
-        inputs, outputs = next(batch_gen_iter)
-        cond = inputs['lo_res_inputs']
-        const = inputs['hi_res_inputs']
-        truth = outputs['output']
-        truth = np.expand_dims(np.array(truth), axis=-1)
-
-        if denormalise_data:
-            truth = data.denormalise(truth)
-
-        if mode == "GAN":
-            noise_shape = np.array(cond)[0, ..., 0].shape + (noise_channels,)
-            noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-        elif mode == "VAEGAN":
-            noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
-            noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-            # call encoder once
-            mean, logvar = gen.encoder([cond, const])
-
-        for ii in range(rank_samples):
-            if mode == "GAN":
-                img_gen = gen.predict([cond, const, noise_gen()])
-            elif mode == "det":
-                img_gen = gen.predict([cond, const])
-            elif mode == 'VAEGAN':
-                img_gen = gen.decoder.predict([mean, logvar, noise_gen(), const])
-            else:
-                try:
-                    img_gen = gen.predict([cond, const])
-                except:  # noqa
-                    assert False, 'image quality metrics not implemented for mode type'
-
-            if denormalise_data:
-                img_gen = data.denormalise(img_gen)
-
-            mae = ((np.abs(truth - img_gen)).mean(axis=(1, 2)))
-            mse = ((truth - img_gen)**2).mean(axis=(1, 2))
-            rapsd = rapsd_batch(truth, img_gen)
-            mae_all.append(mae.flatten())
-            mse_all.append(mse.flatten())
-            rapsd_all.append(rapsd.flatten())
-
-            if ii == 0:
-                # reset on first ensemble member
-                ensmean = np.zeros_like(img_gen)
-            ensmean += img_gen
-
-        ensmean /= rank_samples
-        emmse = ((truth - ensmean)**2).mean(axis=(1, 2))
-        emmse_all.append(emmse.flatten())
-        if show_progress:
-            rmse_so_far = np.sqrt(np.mean(np.concatenate(mse_all)))
-            losses = [("RMSE", rmse_so_far)]
-            progbar.add(1, values=losses)
-
-    mae_all = np.concatenate(mae_all)
-    mse_all = np.concatenate(mse_all)
-    emmse_all = np.concatenate(emmse_all)
-    rapsd_all = np.concatenate(rapsd_all)
-
-    imgqualret = {}
-    imgqualret['mae'] = mae_all
-    imgqualret['mse'] = mse_all
-    imgqualret['emmse'] = emmse_all
-    imgqualret['rapsd'] = rapsd_all
-
-    return imgqualret
-
-
-def quality_metrics_by_time(*,
-                            mode,
-                            arch,
-                            val_years,
-                            log_fname,
-                            weights_dir,
-                            downsample=False,
-                            weights=None,
-                            model_numbers=None,
-                            batch_size=None,
-                            num_batches=None,
-                            filters_gen=None,
-                            filters_disc=None,
-                            input_channels=None,
-                            latent_variables=None,
-                            noise_channels=None,
-                            rank_samples=100,
-                            padding=None):
-
-    df_dict = read_config.read_downscaling_factor()
-
-    gen, batch_gen_valid = setup_inputs(mode=mode,
-                                        arch=arch,
-                                        downscaling_steps=df_dict["steps"],
-                                        val_years=val_years,
-                                        downsample=downsample,
-                                        input_channels=input_channels,
-                                        filters_gen=filters_gen,
-                                        filters_disc=filters_disc,
-                                        noise_channels=noise_channels,
-                                        latent_variables=latent_variables,
-                                        padding=padding)
-
-    log_line(log_fname, f"Samples per image: {rank_samples}")
-    log_line(log_fname, f"Initial dates/times: {batch_gen_valid.dates[0:4]}, {batch_gen_valid.hours[0:4]}")
-    log_line(log_fname, "N RMSE EMRMSE RAPSD MAE")
-
-    for model_number in model_numbers:
-        gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
-
-        if not os.path.isfile(gen_weights_file):
-            print(gen_weights_file, "not found, skipping")
-            continue
-
-        print(gen_weights_file)
-        if mode == "VAEGAN":
-            _init_VAEGAN(gen, batch_gen_valid, True, batch_size, latent_variables)
-        gen.load_weights(gen_weights_file)
-        imgqualret = image_quality(mode=mode,
-                                   gen=gen,
-                                   batch_gen=batch_gen_valid,
-                                   noise_channels=noise_channels,
-                                   latent_variables=latent_variables,
-                                   batch_size=batch_size,
-                                   rank_samples=rank_samples,
-                                   num_batches=num_batches)
-        mae = imgqualret['mae']
-        mse = imgqualret['mse']
-        emmse = imgqualret['emmse']
-        rapsd = imgqualret['rapsd']
-
-        log_line(log_fname, f"{model_number} {np.sqrt(mse.mean()):.6f} {np.sqrt(emmse.mean()):.6f} {np.nanmean(rapsd):.6f} {mae.mean():.6f}")
+    ralsd_batch = []
+    for ii in range(batch1.shape[0]):
+        ralsd_score = calculate_ralsd_rmse(batch1[ii, ...],
+                                           batch2[ii, ...])
+        if ralsd_score:
+            ralsd_batch.append(ralsd_score)
+    return np.array(ralsd_batch)
