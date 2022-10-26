@@ -23,18 +23,17 @@ with open(config_path, 'r') as f:
 mode = setup_params["GENERAL"]["mode"]
 arch = setup_params["MODEL"]["architecture"]
 padding = setup_params["MODEL"]["padding"]
-batch_size = 1  # setup_params["TRAIN"]["batch_size"]
 problem_type = setup_params["GENERAL"]["problem_type"]
 filters_gen = setup_params["GENERATOR"]["filters_gen"]
 noise_channels = setup_params["GENERATOR"]["noise_channels"]
 latent_variables = setup_params["GENERATOR"]["latent_variables"]
 filters_disc = setup_params["DISCRIMINATOR"]["filters_disc"]
-num_batches = 256  # setup_params["EVAL"]["num_batches"]
 add_noise = setup_params["EVAL"]["add_postprocessing_noise"]
 noise_factor = setup_params["EVAL"]["postprocessing_noise_factor"]
 noise_factor = float(noise_factor)
 max_pooling = setup_params["EVAL"]["max_pooling"]
 avg_pooling = setup_params["EVAL"]["avg_pooling"]
+num_images = 256
 
 if problem_type == 'normal':
     input_channels = 9
@@ -43,31 +42,28 @@ elif problem_type == 'superresolution':
     input_channels = 1
     downsample = True
 
-if mode in ["GAN", "VAEGAN"]:
-    rank_samples = 100
+if mode in ("GAN", "VAEGAN"):
+    ensemble_size = 100
 elif mode == "det":
-    rank_samples = 1
+    ensemble_size = 1
 
 out_fn = "{}/eval_{}.txt".format(log_folder, str(val_years))
 
-evaluation.rank_metrics_by_time(mode=mode,
-                                arch=arch,
-                                val_years=val_years,
-                                log_fname=out_fn,
-                                weights_dir=model_weights_root,
-                                downsample=downsample,
-                                add_noise=add_noise,
-                                noise_factor=noise_factor,
-                                model_numbers=model_numbers,
-                                ranks_to_save=model_numbers,
-                                batch_size=batch_size,
-                                num_batches=num_batches,
-                                filters_gen=filters_gen,
-                                filters_disc=filters_disc,
-                                input_channels=input_channels,
-                                latent_variables=latent_variables,
-                                noise_channels=noise_channels,
-                                padding=padding,
-                                rank_samples=rank_samples,
-                                max_pooling=max_pooling,
-                                avg_pooling=avg_pooling)
+evaluation.evaluate_multiple_checkpoints(mode=mode,
+                                         arch=arch,
+                                         val_years=val_years,
+                                         log_fname=out_fn,
+                                         weights_dir=model_weights_root,
+                                         downsample=downsample,
+                                         add_noise=add_noise,
+                                         noise_factor=noise_factor,
+                                         model_numbers=model_numbers,
+                                         ranks_to_save=model_numbers,
+                                         num_images=num_images,
+                                         filters_gen=filters_gen,
+                                         filters_disc=filters_disc,
+                                         input_channels=input_channels,
+                                         latent_variables=latent_variables,
+                                         noise_channels=noise_channels,
+                                         padding=padding,
+                                         ensemble_size=ensemble_size)
