@@ -211,8 +211,7 @@ if __name__ == "__main__":
     else:
         print("Training skipped...")
 
-    rank_fname = os.path.join(log_folder, "rank.txt")
-    qual_fname = os.path.join(log_folder, "qual.txt")
+    eval_fname = os.path.join(log_folder, "eval_validation.txt")
 
     # model iterations to save full rank data to disk for during evaluations;
     # necessary for plot rank histograms. these are large files, so small
@@ -236,7 +235,7 @@ if __name__ == "__main__":
         evaluation.evaluate_multiple_checkpoints(mode=mode,
                                                  arch=arch,
                                                  val_years=val_years,
-                                                 log_fname=rank_fname,
+                                                 log_fname=eval_fname,
                                                  weights_dir=model_weights_root,
                                                  downsample=downsample,
                                                  add_noise=add_noise,

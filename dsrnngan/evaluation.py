@@ -155,14 +155,12 @@ def eval_one_chkpt(*,
             if denormalise_data:
                 sample_gen = data.denormalise(sample_gen)
 
-            # Calculate MAE, MSE, RALSD for this sample
+            # Calculate MAE, MSE for this sample
             mae = ((np.abs(truth - sample_gen)).mean(axis=(1, 2)))
             mse = ((truth - sample_gen)**2).mean(axis=(1, 2))
-            ralsd = ralsd_batch(truth, sample_gen)
-            # ralsd = np.array([0.0])
+
             mae_all.append(mae.flatten())
             mse_all.append(mse.flatten())
-            ralsd_all.append(ralsd.flatten())
 
             if ii == 0:
                 # reset on first ensemble member
@@ -177,7 +175,11 @@ def eval_one_chkpt(*,
         emmse = ((truth - ensmean)**2).mean(axis=(1, 2))
         emmse_all.append(emmse.flatten())
 
-        # turn list of predictions into array
+        # Do all RALSD at once, to avoid re-calculating power spectrum of truth image
+        ralsd = calculate_ralsd_rmse(np.squeeze(truth, axis=-1), samples_gen)
+        ralsd_all.append(ralsd.flatten())
+
+        # turn list of predictions into array, for CRPS/rank calculations
         samples_gen = np.stack(samples_gen, axis=-1)  # shape of samples_gen is [n, h, w, c] e.g. [1, 940, 940, 10]
 
         # calculate CRPS scores for different pooling methods
@@ -339,30 +341,29 @@ def evaluate_multiple_checkpoints(*,
             np.savez_compressed(os.path.join(ranks_folder, fname), ranks=ranks, lowres=lowress, hires=hiress)
 
 
-def calculate_ralsd_rmse(truth, pred):
-    # avoid producing inf values by removing RALSD calc for images
-    # that are mostly zeroes (mean pixel value < 0.01)
-    if (truth.mean()) < 0.002 or (pred.mean()) < 0.002:
-        return np.nan
-    fft_freq_truth = rapsd(truth, fft_method=np.fft)
-    fft_freq_pred = rapsd(pred, fft_method=np.fft)
-    truth = 10 * np.log10(fft_freq_truth)
-    pred = 10 * np.log10(fft_freq_pred)
-    rmse = np.sqrt(np.nanmean((truth-pred)**2))
-    return rmse
+def calculate_ralsd_rmse(truth, samples):
+    # check 'batch size' is 1; can rewrite to handle batch size > 1 if necessary
+    assert truth.shape[0] == 1
+    assert samples[0].shape[0] == 1
 
+    # truth has shape 1 x W x H
+    # samples is a list, each of shape 1 x W x H
 
-def ralsd_batch(batch1, batch2):
-    # radially averaged power spectral density
-    # squeeze out final dimension (channels)
-    if batch1.ndim == 4:
-        batch1 = np.squeeze(batch1, axis=-1)
-    if batch2.ndim == 4:
-        batch2 = np.squeeze(batch2, axis=-1)
-    ralsd_batch = []
-    for ii in range(batch1.shape[0]):
-        ralsd_score = calculate_ralsd_rmse(batch1[ii, ...],
-                                           batch2[ii, ...])
-        if ralsd_score:
-            ralsd_batch.append(ralsd_score)
-    return np.array(ralsd_batch)
+    # avoid producing infinite or misleading values by not doing RALSD calc
+    # for images that are mostly zeroes
+    if truth.mean() < 0.002:
+        return np.array([np.nan])
+    # calculate RAPSD of truth once, not repeatedly!
+    fft_freq_truth = rapsd(np.squeeze(truth, axis=0), fft_method=np.fft)
+    dBtruth = 10 * np.log10(fft_freq_truth)
+
+    ralsd_all = []
+    for pred in samples:
+        if pred.mean() < 0.002:
+            ralsd_all.append(np.nan)
+        else:
+            fft_freq_pred = rapsd(np.squeeze(pred, axis=0), fft_method=np.fft)
+            dBpred = 10 * np.log10(fft_freq_pred)
+            rmse = np.sqrt(np.nanmean((dBtruth-dBpred)**2))
+            ralsd_all.append(rmse)
+    return np.array(ralsd_all)
