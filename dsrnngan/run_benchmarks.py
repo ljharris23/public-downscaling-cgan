@@ -6,7 +6,7 @@ import benchmarks
 import read_config
 from data import all_fcst_fields, get_dates
 from data_generator import DataGenerator as DataGeneratorFull
-from evaluation import rapsd_batch, log_line
+from evaluation import calculate_ralsd_rmse, log_line
 from pooling import pool
 
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
@@ -17,30 +17,21 @@ parser.add_argument('--log_folder', type=str,
                     help="directory to store results")
 parser.add_argument('--predict_year', type=int,
                     help="year to predict on", default=2019)
-parser.add_argument('--ensemble_members', type=int,
-                    help="number of ensemble members", default=100)
-parser.add_argument('--num_batches', type=int,
+parser.add_argument('--num_images', type=int,
                     help="number of images to predict on", default=256)
-parser.set_defaults(max_pooling=False)
-parser.set_defaults(avg_pooling=False)
-parser.set_defaults(include_nn_interp=False)
-parser.set_defaults(include_zeros=False)
+parser.set_defaults(include_nn_interp=True)
+parser.set_defaults(include_zeros=True)
 parser.add_argument('--include_nn_interp', dest='include_nn_interp', action='store_true',
                     help="Include nearest-neighbour upsampling as benchmark")
 parser.add_argument('--include_zeros', dest='include_zeros', action='store_true',
                     help="Include all-zero prediction as benchmark")
-parser.add_argument('--max_pooling', dest='max_pooling', action='store_true',
-                    help="Include max pooling for CRPS")
-parser.add_argument('--avg_pooling', dest='avg_pooling', action='store_true',
-                    help="Include average pooling for CRPS")
 args = parser.parse_args()
 
 predict_year = args.predict_year
-ensemble_members = args.ensemble_members
-num_batches = args.num_batches
+num_images = args.num_images
 log_folder = args.log_folder
 batch_size = 1  # memory issues
-log_fname = os.path.join(log_folder, "benchmarks_{}_{}_{}.txt".format(predict_year, num_batches, ensemble_members))
+log_fname = os.path.join(log_folder, f"benchmarks_{predict_year}_{num_images}.txt")
 
 # setup data
 dates = get_dates(predict_year)
@@ -59,24 +50,16 @@ if args.include_nn_interp:
 if args.include_zeros:
     benchmark_methods.append('zeros')
 
-pooling_methods = ['no_pooling']
-if args.max_pooling:
-    pooling_methods.append('max_4')
-    pooling_methods.append('max_16')
-if args.avg_pooling:
-    pooling_methods.append('avg_4')
-    pooling_methods.append('avg_16')
+CRPS_pooling_methods = ['no_pooling', 'max_4', 'max_16', 'avg_4', 'avg_16']
 
-# log_line(log_fname, "Number of samples {}".format(num_batches))
-# log_line(log_fname, "Evaluation year {}".format(predict_year))
-log_line(log_fname, "Model CRPS CRPS_avg_4 CRPS_max_4 CRPS_avg_16 CRPS_max_16 RMSE EMRMSE MAE RAPSD")
+log_line(log_fname, "Model CRPS CRPS_max_4 CRPS_max_16 CRPS_avg_4 CRPS_avg_16 RMSE EMRMSE RALSD MAE")
 
 sample_crps = {}
 crps_scores = {}
 mse_scores = {}
 emmse_scores = {}
 mae_scores = {}
-rapsd_scores = {}
+ralsd_scores = {}
 
 tpidx = all_fcst_fields.index('tp')
 
@@ -85,12 +68,12 @@ for benchmark in benchmark_methods:
     mse_scores[benchmark] = []
     emmse_scores[benchmark] = []
     mae_scores[benchmark] = []
-    rapsd_scores[benchmark] = []
+    ralsd_scores[benchmark] = []
     print(f"calculating for benchmark method {benchmark}")
     data_benchmarks_iter = iter(data_benchmarks)
-    for i in range(num_batches):
-        print(f"calculating for sample number {i+1} of {num_batches}")
-        (inp, outp) = next(data_benchmarks_iter)
+    for ii in range(num_images):
+        print(f"calculating for sample number {ii+1} of {num_images}")
+        inp, outp = next(data_benchmarks_iter)
         # pooling requires 4 dimensions NHWC
         sample_truth = np.expand_dims(outp['output'], axis=-1)
         if benchmark == 'nn_interp':
@@ -101,7 +84,7 @@ for benchmark in benchmark_methods:
             raise RuntimeError("Benchmark not recognised")
 
         sample_benchmark = np.expand_dims(sample_benchmark, axis=-1)
-        for method in pooling_methods:
+        for method in CRPS_pooling_methods:
             if method == 'no_pooling':
                 sample_truth_pooled = sample_truth
                 sample_benchmark_pooled = sample_benchmark
@@ -122,30 +105,24 @@ for benchmark in benchmark_methods:
         mse_score = ((sample_truth - sample_benchmark)**2).mean(axis=(1, 2))
         mae_score = np.abs(sample_truth - sample_benchmark).mean(axis=(1, 2))
         if benchmark == 'zeros':
-            rapsd_score = np.nan
+            ralsd_score = np.nan
         else:
-            rapsd_score = rapsd_batch(sample_truth, sample_benchmark)
+            ralsd_score = calculate_ralsd_rmse(np.squeeze(sample_truth, axis=-1), [np.squeeze(sample_benchmark, axis=-1)])
         mse_scores[benchmark].append(mse_score)
         emmse_scores[benchmark].append(mse_score)  # no ensemble
         mae_scores[benchmark].append(mae_score)
-        rapsd_scores[benchmark].append(rapsd_score)
+        ralsd_scores[benchmark].append(ralsd_score)
         gc.collect()
 
-    if not args.max_pooling:
-        crps_scores[benchmark]['max_4'] = np.nan
-        crps_scores[benchmark]['max_16'] = np.nan
-    if not args.avg_pooling:
-        crps_scores[benchmark]['avg_4'] = np.nan
-        crps_scores[benchmark]['avg_16'] = np.nan
-    log_line(log_fname, "{} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}"
-             .format(benchmark,
-                     np.array(crps_scores[benchmark]['no_pooling']).mean(),
-                     np.array(crps_scores[benchmark]['avg_4']).mean(),
-                     np.array(crps_scores[benchmark]['max_4']).mean(),
-                     np.array(crps_scores[benchmark]['avg_16']).mean(),
-                     np.array(crps_scores[benchmark]['max_16']).mean(),
-                     np.sqrt(np.array(mse_scores[benchmark]).mean()),
-                     np.sqrt(np.array(emmse_scores[benchmark]).mean()),
-                     np.array(mae_scores[benchmark]).mean(),
-                     np.nanmean(np.array(rapsd_scores[benchmark]))
-                     ))
+    CRPS_pixel = np.asarray(crps_scores[benchmark]['no_pooling']).mean()
+    CRPS_max_4 = np.asarray(crps_scores[benchmark]['max_4']).mean()
+    CRPS_max_16 = np.asarray(crps_scores[benchmark]['max_16']).mean()
+    CRPS_avg_4 = np.asarray(crps_scores[benchmark]['avg_4']).mean()
+    CRPS_avg_16 = np.asarray(crps_scores[benchmark]['avg_16']).mean()
+
+    rmse = np.sqrt(np.array(mse_scores[benchmark]).mean())
+    emrmse = np.sqrt(np.array(emmse_scores[benchmark]).mean())
+    mae = np.array(mae_scores[benchmark]).mean()
+    ralsd = np.nanmean(np.array(ralsd_scores[benchmark]))
+
+    log_line(log_fname, f"{benchmark} {CRPS_pixel:.6f} {CRPS_max_4:.6f} {CRPS_max_16:.6f} {CRPS_avg_4:.6f} {CRPS_avg_16:.6f} {rmse:.6f} {emrmse:.6f} {ralsd:.6f} {mae:.6f}")
