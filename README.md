@@ -29,7 +29,7 @@ You should have two main datasets:
 1. Forecast data (low-resolution)
 2. Truth data, for example radar (high-resolution)
 
-All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.  In the original paper, we use 10x, but other factors are fine.  You will have to change the sizes of the `UpSampling2D` layers in `models.py`, and perhaps use more or fewer `UpSampling2D` layers.
+All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.  Enter this downscaling factor in `downscaling_factor.yaml`, along with a list of `steps` that multiply to the overall factor.  In the original paper, we use 10x, with steps of 5 and 2.  See `models.py` for exactly how these are used in the architecture.
 
 In the paper, we also used a third, static, dataset:
 
@@ -81,18 +81,15 @@ python main.py --config <path/to/config/file>
 There are a number of options you can use at this point. These will 
 evaluate your model after it has finished training:
 
---rank flag will run CRPS/rank-based evaluation
---qual flag will run image quality based evaluation (RMSE, MAE, etc.)
---plot_ranks will plot rank histograms
-	     N.B. you must run rank based eval first
+- --evaluate flag will run checkpoint evaluation (CRPS, rank calculations, RMSE, RALSD, etc.)
+- --plot_ranks will plot rank histograms (requires `--evaluate`)
 	   
-If you choose to run --rank and/or --qual, you must
-also specify if you want to do this for all model iterations or 
-just a selection. Do this using 
+If you choose to run `--evaluate`, you must also specify if you want
+to do this for all model checkpoints or just a selection. Do this using 
 
-- --eval_full	  (all model checkpoints)
-- --eval_short	  (the final 1/3rd of model checkpoints)
-- --eval_blitz	  (the final 4 model checkpoints)
+- `--eval_full`	  (all model checkpoints)
+- `--eval_short`	  (recommended; the final 1/3rd of model checkpoints)
+- `--eval_blitz`	  (the final 4 model checkpoints)
 
 Two things to note:
 - These three options work well with the 100 checkpoints that we 
@@ -101,16 +98,15 @@ them accordingly.
 - Calculating everything, for all model iterations, will take a long 
 time. Possibly weeks. You have been warned. 
 
-As an example, to train a model and evaluate it fully but for only the
-last few model iterations, on full images, you could run:
+As an example, to train a model and evaluate the last few model
+checkpoints, you could run:
 
-python main.py --config <path/to/config/file> --eval_blitz --rank
---qual --plot_ranks
+`python main.py --config <path/to/config/file> --evaluate --eval_blitz --plot_ranks`
 
 2. If you've already trained your model, and you just want to run some 
 evaluation, use the --no_train flag, for example:
 
-python main.py --config <path/to/config/file> --no_train --eval_full
+`python main.py --config <path/to/config/file> --no_train --evaluate --eval_full`
 
 3. To generate plots of the output from a trained model, use predict.py
 This requires a path to the directory where the weights of the model are 
