@@ -1,7 +1,10 @@
 import argparse
 import gc
 import os
+
 import numpy as np
+from properscoring import crps_ensemble
+
 import benchmarks
 import read_config
 from data import all_fcst_fields, get_dates
@@ -38,7 +41,7 @@ dates = get_dates(predict_year)
 data_benchmarks = DataGeneratorFull(dates=dates,
                                     fcst_fields=all_fcst_fields,
                                     batch_size=batch_size,
-                                    log_precip=False,
+                                    log_precip=False,  # no need to denormalise data
                                     shuffle=True,
                                     constants=True,
                                     hour='random',
@@ -71,11 +74,16 @@ for benchmark in benchmark_methods:
     ralsd_scores[benchmark] = []
     print(f"calculating for benchmark method {benchmark}")
     data_benchmarks_iter = iter(data_benchmarks)
+
     for ii in range(num_images):
         print(f"calculating for sample number {ii+1} of {num_images}")
         inp, outp = next(data_benchmarks_iter)
         # pooling requires 4 dimensions NHWC
-        sample_truth = np.expand_dims(outp['output'], axis=-1)
+        truth = np.expand_dims(outp['output'], axis=-1)
+
+        # These two simple comparison models both produce single predictions.
+        # A more complicated method could produce an ensemble (with different
+        # ensemble members in the last dimension)
         if benchmark == 'nn_interp':
             sample_benchmark = benchmarks.nn_interp_model(inp['lo_res_inputs'][..., tpidx], ds_fac)
         elif benchmark == 'zeros':
@@ -86,28 +94,27 @@ for benchmark in benchmark_methods:
         sample_benchmark = np.expand_dims(sample_benchmark, axis=-1)
         for method in CRPS_pooling_methods:
             if method == 'no_pooling':
-                sample_truth_pooled = sample_truth
+                truth_pooled = truth
                 sample_benchmark_pooled = sample_benchmark
             else:
-                sample_truth_pooled = pool(sample_truth, method)
+                truth_pooled = pool(truth, method)
                 sample_benchmark_pooled = pool(sample_benchmark, method)
-            sample_truth_pooled = np.squeeze(sample_truth_pooled)
-            sample_benchmark_pooled = np.squeeze(sample_benchmark_pooled)
 
-            crps_score = benchmarks.mean_crps(sample_truth_pooled, sample_benchmark_pooled)
-            del sample_truth_pooled, sample_benchmark_pooled
+            # crps_ensemble expects truth dims [N, H, W], pred dims [N, H, W, C]
+            crps_score = crps_ensemble(np.squeeze(truth_pooled, axis=-1), sample_benchmark_pooled)
+            del truth_pooled, sample_benchmark_pooled
 
             if method not in crps_scores[benchmark]:
                 crps_scores[benchmark][method] = []
             crps_scores[benchmark][method].append(crps_score)
             gc.collect()
 
-        mse_score = ((sample_truth - sample_benchmark)**2).mean(axis=(1, 2))
-        mae_score = np.abs(sample_truth - sample_benchmark).mean(axis=(1, 2))
+        mse_score = ((truth - sample_benchmark)**2).mean(axis=(1, 2))
+        mae_score = np.abs(truth - sample_benchmark).mean(axis=(1, 2))
         if benchmark == 'zeros':
             ralsd_score = np.nan
         else:
-            ralsd_score = calculate_ralsd_rmse(np.squeeze(sample_truth, axis=-1), [np.squeeze(sample_benchmark, axis=-1)])
+            ralsd_score = calculate_ralsd_rmse(np.squeeze(truth, axis=-1), [np.squeeze(sample_benchmark, axis=-1)])
         mse_scores[benchmark].append(mse_score)
         emmse_scores[benchmark].append(mse_score)  # no ensemble
         mae_scores[benchmark].append(mae_score)

@@ -5,6 +5,7 @@ Use conda (even better, mamba); install everything from conda-forge
 - TensorFlow 2
     - we use v2.7; other versions should require no/minimal changes
     - GPU strongly recommended (use a GPU-enabled TensorFlow build, compatable with the installed CUDA version)
+- numba[^1]
 - matplotlib
 - seaborn
 - cartopy
@@ -22,6 +23,8 @@ Use conda (even better, mamba); install everything from conda-forge
 - iris
 
 May also require cudatoolkit
+
+[^1]: If numba is not available, we suggest you replace `from properscoring import crps_ensemble` to `from crps import crps_ensemble` in `evaluation.py` and `run_benchmarks.py`. This is because properscoring will fall back to an inefficient and memory-heavy CRPS implementation in this case.
 
 # High-level data overview
 

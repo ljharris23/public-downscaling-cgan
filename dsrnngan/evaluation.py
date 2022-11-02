@@ -3,9 +3,9 @@ import os
 import warnings
 
 import numpy as np
+from properscoring import crps_ensemble
 from tensorflow.python.keras.utils import generic_utils
 
-import crps
 import data
 import read_config
 import setupdata
@@ -191,7 +191,7 @@ def eval_one_chkpt(*,
                 truth_pooled = pool(truth, method)
                 samples_gen_pooled = pool(samples_gen, method)
             # crps_ensemble expects truth dims [N, H, W], pred dims [N, H, W, C]
-            crps_score = crps.crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled).mean()
+            crps_score = crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled).mean()
             del truth_pooled, samples_gen_pooled
             gc.collect()
 
