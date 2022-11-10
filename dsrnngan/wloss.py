@@ -16,7 +16,7 @@ def sample_crps(y_true, y_pred):
     mae = tf.reduce_mean(tf.abs(tf.expand_dims(y_true, axis=0) -
                                 tf.expand_dims(y_pred, -1)))  # trailing dim on truth
     ensemble_size = y_pred.shape[0]
-    coef = -1/(2*ensemble_size * (ensemble_size - 1))
+    coef = -1/(2*ensemble_size*ensemble_size)
     ens_var = coef * tf.reduce_mean(tf.reduce_sum(tf.abs(tf.expand_dims(y_pred, axis=0) -
                                                          tf.expand_dims(y_pred, axis=1)),
                                                   axis=(0, 1)))
