@@ -15,8 +15,8 @@ records_folder = data_paths["TFRecords"]["tfrecords_path"]
 ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
 
 
-def DataGenerator(year, batch_size, repeat=True, downsample=False, weights=None):
-    return create_mixed_dataset(year, batch_size, repeat=repeat, downsample=downsample, weights=weights)
+def DataGenerator(year, batch_size, repeat=True, autocoarsen=False, weights=None):
+    return create_mixed_dataset(year, batch_size, repeat=repeat, autocoarsen=autocoarsen, weights=weights)
 
 
 def create_mixed_dataset(year,
@@ -25,7 +25,7 @@ def create_mixed_dataset(year,
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
                          repeat=True,
-                         downsample=False,
+                         autocoarsen=False,
                          folder=records_folder,
                          shuffle_size=1024,
                          weights=None):
@@ -45,10 +45,10 @@ def create_mixed_dataset(year,
     sampled_ds = tf.data.Dataset.sample_from_datasets(datasets,
                                                       weights=weights).batch(batch_size)
 
-    if downsample and return_dic:
-        sampled_ds = sampled_ds.map(_dataset_downsampler)
-    elif downsample and not return_dic:
-        sampled_ds = sampled_ds.map(_dataset_downsampler_list)
+    if autocoarsen and return_dic:
+        sampled_ds = sampled_ds.map(_dataset_autocoarsener)
+    elif autocoarsen and not return_dic:
+        sampled_ds = sampled_ds.map(_dataset_autocoarsener_list)
     sampled_ds = sampled_ds.prefetch(2)
     return sampled_ds
 
@@ -57,7 +57,7 @@ def create_mixed_dataset(year,
 # will take classes 6 & 7 together
 
 
-def _dataset_downsampler(inputs, outputs):
+def _dataset_autocoarsener(inputs, outputs):
     image = outputs['output']
     kernel_tf = tf.constant(1.0/(ds_fac*ds_fac), shape=(ds_fac, ds_fac, 1, 1), dtype=tf.float32)
     image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, ds_fac, ds_fac, 1], padding='VALID',
@@ -66,7 +66,7 @@ def _dataset_downsampler(inputs, outputs):
     return inputs, outputs
 
 
-def _dataset_downsampler_list(inputs, constants, outputs):
+def _dataset_autocoarsener_list(inputs, constants, outputs):
     image = outputs
     kernel_tf = tf.constant(1.0/(ds_fac*ds_fac), shape=(ds_fac, ds_fac, 1, 1), dtype=tf.float32)
     image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, ds_fac, ds_fac, 1], padding='VALID', name='conv_debug', data_format='NHWC')
@@ -131,7 +131,7 @@ def create_dataset(year,
 def create_fixed_dataset(year=None,
                          mode='validation',
                          batch_size=16,
-                         downsample=False,
+                         autocoarsen=False,
                          fcst_shape=(20, 20, 9),
                          con_shape=(200, 200, 2),
                          out_shape=(200, 200, 1),
@@ -151,10 +151,10 @@ def create_fixed_dataset(year=None,
                                        consize=con_shape,
                                        outsize=out_shape))
     ds = ds.batch(batch_size)
-    if downsample and return_dic:
-        ds = ds.map(_dataset_downsampler)
-    elif downsample and not return_dic:
-        ds = ds.map(_dataset_downsampler_list)
+    if autocoarsen and return_dic:
+        ds = ds.map(_dataset_autocoarsener)
+    elif autocoarsen and not return_dic:
+        ds = ds.map(_dataset_autocoarsener_list)
     return ds
 
 

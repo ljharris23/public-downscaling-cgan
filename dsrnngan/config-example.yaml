@@ -1,6 +1,6 @@
 GENERAL:
     mode: "GAN"  # choices 'GAN', 'VAEGAN', 'det'
-    problem_type: "normal"  # choices 'normal', 'superresolution'
+    problem_type: "normal"  # choices 'normal' (forecast to truth), 'autocoarsen' (coarsened truth to truth)
     
 MODEL:
     architecture: "forceconv"  # choices 'normal', 'forceconv', 'forceconv-long'

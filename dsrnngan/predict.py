@@ -101,13 +101,13 @@ weights_fn = os.path.join(log_folder, 'models', 'gen_weights-{}.h5'.format(model
 dates = get_dates(predict_year)
 
 if problem_type == "normal":
-    downsample = False
+    autocoarsen = False
     plot_input_title = 'Forecast'
     input_channels = 9
-elif problem_type == "superresolution":
-    downsample = True
+elif problem_type == "autocoarsen":
+    autocoarsen = True
     plot_input_title = 'Downsampled'
-    input_channels = 1  # superresolution problem doesn't have all 9 input fields
+    input_channels = 1  # autocoarsen problem doesn't have all 9 input fields
 
 # load appropriate dataset
 if args.predict_full_image:
@@ -120,13 +120,13 @@ if args.predict_full_image:
                                      constants=True,
                                      hour='random',
                                      fcst_norm=True,
-                                     downsample=downsample)
+                                     autocoarsen=autocoarsen)
 
 else:
     plot_label = 'small'
     data_predict = create_fixed_dataset(predict_year,
                                         batch_size=batch_size,
-                                        downsample=downsample)
+                                        autocoarsen=autocoarsen)
 
 # initialise model
 model = setup_model(mode=mode,
@@ -152,7 +152,7 @@ data_benchmarks = DataGeneratorFull(dates=dates,
                                     shuffle=True,
                                     hour='random',
                                     fcst_norm=False,
-                                    downsample=downsample)
+                                    autocoarsen=autocoarsen)
 
 pred = []
 seq_real = []
@@ -167,8 +167,8 @@ for i in range(num_samples):
     dates_save.append(data_predict.dates[i])
     hours_save.append(data_predict.hours[i])
 
-    # superresolution problem has only one input field
-    if problem_type == 'superresolution':
+    # autocoarsened problem has only one input field
+    if problem_type == 'autocoarsen':
         inputs['lo_res_inputs'] = np.expand_dims(inputs['lo_res_inputs'][..., 0], axis=-1)
     # store denormalised inputs, outputs, predictions
     seq_const.append(inputs['hi_res_inputs'])
@@ -177,7 +177,7 @@ for i in range(num_samples):
     #  denormalise precip inputs
     input_conditions[..., 0:2] = data.denormalise(inputs['lo_res_inputs'][..., 0:2])
 
-    if problem_type != 'superresolution':
+    if problem_type != 'autocoarsen':
         #  denormalise wind inputs
         input_conditions[..., -2] = inputs['lo_res_inputs'][..., -2]*fcst_norm['u700'][1] + fcst_norm['u700'][0]
         input_conditions[..., -1] = inputs['lo_res_inputs'][..., -1]*fcst_norm['v700'][1] + fcst_norm['v700'][0]
@@ -229,7 +229,7 @@ for i in range(num_samples):
 # list entry[0] - sample image 0
 tpidx = all_fcst_fields.index('tp')
 fcst_total = seq_cond[0][0, ..., tpidx]  # total precip
-if problem_type != 'superresolution':
+if problem_type != 'autocoarsen':
     cpidx = all_fcst_fields.index('cp')
     uidx = all_fcst_fields.index('u700')
     vidx = all_fcst_fields.index('v700')
@@ -248,7 +248,7 @@ cb = list(range(0, 6))
 plt.figure(figsize=(8, 7), dpi=200)
 gs = gridspec.GridSpec(2, 3)
 ax1 = plt.subplot(gs[0, 0], projection=ccrs.PlateCarree())
-if problem_type != 'superresolution':
+if problem_type != 'autocoarsen':
     ax2 = plt.subplot(gs[0, 1], projection=ccrs.PlateCarree())
 else:
     ax2 = plt.subplot(gs[0, 1])
@@ -269,7 +269,7 @@ cb[2] = plt.colorbar(fcst_total_ax, ax=ax[0],
                      orientation='horizontal',
                      fraction=0.035, pad=0.04)
 
-if problem_type != 'superresolution':
+if problem_type != 'autocoarsen':
     fcst_conv_ax = ax[1].imshow(fcst_conv,
                                 norm=colors.LogNorm(*value_range_precip),
                                 cmap=cmap, origin='lower', extent=extent,
@@ -332,7 +332,7 @@ cb[5] = plt.colorbar(PRED_mean, ax=ax[5],
 for ax in ax:
     ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
 
-if problem_type != "superresolution":
+if problem_type != "autocoarsen":
     for cb in cb[1:]:
         cb.set_ticks(cb_tick_loc)
         cb.set_ticklabels(cb_tick_labels)

@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
     if mode not in ['GAN', 'VAEGAN', 'det']:
         raise ValueError("Mode type is restricted to 'GAN' 'VAEGAN' 'det'")
-    if problem_type not in ['normal', 'superresolution']:
-        raise ValueError("Problem type is restricted to 'normal' 'superresolution'")
+    if problem_type not in ['normal', 'autocoarsen']:
+        raise ValueError("Problem type is restricted to 'normal' 'autocoarsen'")
     if ensemble_size is not None:
         if CLtype not in ["CRPS", "CRPS_phys", "ensmeanMSE", "ensmeanMSE_phys"]:
             raise ValueError("Content loss type is restricted to 'CRPS', 'CRPS_phys', 'ensmeanMSE', 'ensmeanMSE_phys'")
@@ -113,10 +113,10 @@ if __name__ == "__main__":
         yaml.dump(setup_params, outfile, default_flow_style=False)
 
     if problem_type == "normal":
-        downsample = False
+        autocoarsen = False
         input_channels = 9
-    elif problem_type == "superresolution":
-        downsample = True
+    elif problem_type == "autocoarsen":
+        autocoarsen = True
         input_channels = 1
     else:
         raise ValueError("no such problem type, try again!")
@@ -144,7 +144,7 @@ if __name__ == "__main__":
             train_years=train_years,
             val_years=val_years,
             val_size=val_size,
-            downsample=downsample,
+            autocoarsen=autocoarsen,
             weights=training_weights,
             batch_size=batch_size,
             load_full_image=False)
@@ -236,7 +236,7 @@ if __name__ == "__main__":
                                                  val_years=val_years,
                                                  log_fname=eval_fname,
                                                  weights_dir=model_weights_root,
-                                                 downsample=downsample,
+                                                 autocoarsen=autocoarsen,
                                                  add_noise=add_noise,
                                                  noise_factor=noise_factor,
                                                  model_numbers=model_numbers,

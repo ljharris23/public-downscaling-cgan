@@ -12,7 +12,7 @@ return_dic = True
 class DataGenerator(Sequence):
     def __init__(self, dates, fcst_fields, batch_size, log_precip=True,
                  shuffle=True, constants=None, hour='random', fcst_norm=True,
-                 downsample=False, seed=9999):
+                 autocoarsen=False, seed=9999):
         self.dates = dates
 
         if isinstance(hour, str):
@@ -44,8 +44,8 @@ class DataGenerator(Sequence):
         self.shuffle = shuffle
         self.hour = hour
         self.fcst_norm = fcst_norm
-        self.downsample = downsample
-        if self.downsample:
+        self.autocoarsen = autocoarsen
+        if self.autocoarsen:
             # read downscaling factor from file
             df_dict = read_config.read_downscaling_factor()  # read downscaling params
             self.ds_factor = df_dict["downscaling_factor"]
@@ -60,7 +60,7 @@ class DataGenerator(Sequence):
         # Number of batches in dataset
         return len(self.dates) // self.batch_size
 
-    def _dataset_downsampler(self, radar):
+    def _dataset_autocoarsener(self, radar):
         kernel_tf = tf.constant(1.0/(self.ds_factor*self.ds_factor), shape=(self.ds_factor, self.ds_factor, 1, 1), dtype=tf.float32)
         image = tf.nn.conv2d(radar, filters=kernel_tf, strides=[1, self.ds_factor, self.ds_factor, 1], padding='VALID',
                              name='conv_debug', data_format='NHWC')
@@ -78,9 +78,9 @@ class DataGenerator(Sequence):
             log_precip=self.log_precip,
             hour=hours_batch,
             norm=self.fcst_norm)
-        if self.downsample:
+        if self.autocoarsen:
             # replace forecast data by coarsened radar data!
-            data_x_batch = self._dataset_downsampler(data_y_batch[..., np.newaxis])
+            data_x_batch = self._dataset_autocoarsener(data_y_batch[..., np.newaxis])
 
         if self.constants is None:
             if return_dic:

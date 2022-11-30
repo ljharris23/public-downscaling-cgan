@@ -10,33 +10,33 @@ def setup_batch_gen(train_years,
                     val_years,
                     batch_size=64,
                     val_size=None,
-                    downsample=False,
+                    autocoarsen=False,
                     weights=None,
                     val_fixed=True):
 
     tfrecords_generator.return_dic = False
-    print(f"downsample flag is {downsample}")
+    print(f"autocoarsen flag is {autocoarsen}")
     train = None if train_years is None \
         else DataGenerator(train_years,
                            batch_size=batch_size,
-                           downsample=downsample, weights=weights)
+                           autocoarsen=autocoarsen, weights=weights)
 
     # note -- using create_fixed_dataset with a batch size not divisible by 16 will cause problems [is this true?]
     # create_fixed_dataset will not take a list
     if val_size is not None:
         # assume that val_size is small enough that we can just use one batch
-        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=val_size, downsample=downsample)
+        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=val_size, autocoarsen=autocoarsen)
         val = val.take(1)
         if val_fixed:
             val = val.cache()
     else:
-        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=batch_size, downsample=downsample)
+        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=batch_size, autocoarsen=autocoarsen)
     return train, val
 
 
 def setup_full_image_dataset(years,
                              batch_size=1,
-                             downsample=False):
+                             autocoarsen=False):
 
     from data_generator import DataGenerator as DataGeneratorFull
     from data import get_dates
@@ -50,14 +50,14 @@ def setup_full_image_dataset(years,
                                   constants=True,
                                   hour='random',
                                   fcst_norm=True,
-                                  downsample=downsample)
+                                  autocoarsen=autocoarsen)
     return data_full
 
 
 def setup_data(train_years=None,
                val_years=None,
                val_size=None,
-               downsample=False,
+               autocoarsen=False,
                weights=None,
                batch_size=None,
                load_full_image=False):
@@ -66,11 +66,11 @@ def setup_data(train_years=None,
         batch_gen_train = None if train_years is None \
             else setup_full_image_dataset(train_years,
                                           batch_size=batch_size,
-                                          downsample=downsample)
+                                          autocoarsen=autocoarsen)
         batch_gen_valid = None if val_years is None \
             else setup_full_image_dataset(val_years,
                                           batch_size=batch_size,
-                                          downsample=downsample)
+                                          autocoarsen=autocoarsen)
 
     else:
         batch_gen_train, batch_gen_valid = setup_batch_gen(
@@ -78,7 +78,7 @@ def setup_data(train_years=None,
             val_years=val_years,
             batch_size=batch_size,
             val_size=val_size,
-            downsample=downsample,
+            autocoarsen=autocoarsen,
             weights=weights)
 
     gc.collect()

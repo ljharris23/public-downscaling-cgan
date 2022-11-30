@@ -68,10 +68,10 @@ def plot_fss_curves(*,
     downscaling_steps = df_dict["steps"]
 
     if problem_type == "normal":
-        downsample = False
+        autocoarsen = False
         input_channels = 9
-    elif problem_type == "superresolution":
-        downsample = True
+    elif problem_type == "autocoarsen":
+        autocoarsen = True
         input_channels = 1
     else:
         raise Exception("no such problem type, try again!")
@@ -111,12 +111,12 @@ def plot_fss_curves(*,
                                          constants=True,
                                          hour='random',
                                          fcst_norm=True,
-                                         downsample=downsample)
+                                         autocoarsen=autocoarsen)
 
     if not predict_full_image:
         data_predict = create_fixed_dataset(predict_year,
                                             batch_size=batch_size,
-                                            downsample=downsample)
+                                            autocoarsen=autocoarsen)
 
     if plot_upsample:
         if not predict_full_image:
