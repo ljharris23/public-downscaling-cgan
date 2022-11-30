@@ -169,8 +169,7 @@ if __name__ == "__main__":
 
         plot_fname = os.path.join(log_folder, "progress.pdf")
 
-        while (training_samples < num_samples):  # main training loop
-
+        while training_samples < num_samples:  # main training loop
             print("Checkpoint {}/{}".format(checkpoint, num_checkpoints))
 
             # train for some number of batches

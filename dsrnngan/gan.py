@@ -119,7 +119,7 @@ class WGANGP(object):
                 disc_in_fake = self.gen(gen_in)
             elif self.mode == 'VAEGAN':
                 encoder_in = cond_in + const_in
-                (encoder_mean, encoder_log_var) = self.gen.encoder(encoder_in)
+                encoder_mean, encoder_log_var = self.gen.encoder(encoder_in)
                 decoder_in = [encoder_mean, encoder_log_var, noise_in, const_in]
                 disc_in_fake = self.gen.decoder(decoder_in)
             disc_in_avg = RandomWeightedAverage()([disc_in_real, disc_in_fake])
@@ -173,10 +173,8 @@ class WGANGP(object):
         del tmp_batch
         if show_progress:
             # Initialize progbar and batch counter
-            progbar = generic_utils.Progbar(
-                num_gen_batches*batch_size)
-        disc_target_real = np.ones(
-            (batch_size, 1), dtype=np.float32)
+            progbar = generic_utils.Progbar(num_gen_batches*batch_size)
+        disc_target_real = np.ones((batch_size, 1), dtype=np.float32)
         disc_target_fake = -disc_target_real
         gen_target = disc_target_real
         target_gp = np.zeros((batch_size, 1), dtype=np.float32)
@@ -188,14 +186,14 @@ class WGANGP(object):
             for tracker in self.gen_trainer.metrics:
                 tracker.reset_states()
 
-        for k in range(num_gen_batches):
+        for kk in range(num_gen_batches):
 
             # train discriminator
             disc_loss = None
             disc_loss_n = 0
             for rep in range(training_ratio):
                 # generate some real samples
-                (cond, const, sample) = batch_gen_iter.get_next()
+                cond, const, sample = batch_gen_iter.get_next()
 
                 with Nontrainable(self.gen):
                     dl = self.disc_trainer.train_on_batch(
@@ -212,7 +210,7 @@ class WGANGP(object):
             disc_loss /= disc_loss_n
 
             with Nontrainable(self.disc):
-                (cond, const, sample) = batch_gen_iter.get_next()
+                cond, const, sample = batch_gen_iter.get_next()
                 condconst = [cond, const]
                 if self.ensemble_size is None:
                     gt_outputs = [gen_target]
@@ -235,10 +233,10 @@ class WGANGP(object):
 
             if show_progress:
                 losses = []
-                for (i, dl) in enumerate(disc_loss):
-                    losses.append(("D{}".format(i), dl))
-                for (i, gl) in enumerate(gen_loss):
-                    losses.append(("G{}".format(i), gl))
+                for ii, dl in enumerate(disc_loss):
+                    losses.append((f"D{ii}", dl))
+                for ii, gl in enumerate(gen_loss):
+                    losses.append((f"G{ii}", gl))
                 progbar.add(batch_size,
                             values=losses)
 
@@ -253,7 +251,7 @@ class WGANGP(object):
                 loss_log["gen_loss_total"] = gen_loss[0]
                 if self.ensemble_size is not None:
                     loss_log["gen_loss_disc"] = gen_loss[1]
-                    loss_log["gen_loss_ct_crps"] = gen_loss[2]
+                    loss_log["gen_loss_ct"] = gen_loss[2]
             elif self.mode == "VAEGAN":
                 loss_log["disc_loss"] = disc_loss[0]
                 loss_log["disc_loss_real"] = disc_loss[1]

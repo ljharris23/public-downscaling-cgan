@@ -35,7 +35,7 @@ class RandomWeightedAverage(_Merge):
             raise ValueError('A `RandomWeightedAverage` layer should be '
                              'called on exactly 2 inputs')
 
-        (x, y) = inputs
+        x, y = inputs
         shape = K.shape(x)
         weights = K.random_uniform(shape[:1], 0, 1)
         for i in range(len(K.int_shape(x))-1):
@@ -57,7 +57,7 @@ class ReflectionPadding2D(Layer):
         )
 
     def call(self, x):
-        (i_pad, j_pad) = self.padding
+        i_pad, j_pad = self.padding
         return tf.pad(x, [[0, 0], [i_pad, i_pad], [j_pad, j_pad], [0, 0]], 'REFLECT')
 
 
@@ -75,5 +75,5 @@ class SymmetricPadding2D(Layer):
         )
 
     def call(self, x):
-        (i_pad, j_pad) = self.padding
+        i_pad, j_pad = self.padding
         return tf.pad(x, [[0, 0], [i_pad, i_pad], [j_pad, j_pad], [0, 0]], 'SYMMETRIC')

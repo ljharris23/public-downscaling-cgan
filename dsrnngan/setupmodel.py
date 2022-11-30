@@ -54,13 +54,13 @@ def setup_model(*,
                            CLtype=CLtype,
                            content_loss_weight=content_loss_weight)
     elif mode == 'VAEGAN':
-        (encoder, decoder) = gen_to_use(mode=mode,
-                                        arch=arch,
-                                        downscaling_steps=downscaling_steps,
-                                        input_channels=input_channels,
-                                        latent_variables=latent_variables,
-                                        filters_gen=filters_gen,
-                                        padding=padding)
+        encoder, decoder = gen_to_use(mode=mode,
+                                      arch=arch,
+                                      downscaling_steps=downscaling_steps,
+                                      input_channels=input_channels,
+                                      latent_variables=latent_variables,
+                                      filters_gen=filters_gen,
+                                      padding=padding)
         disc = disc_to_use(arch=arch,
                            downscaling_steps=downscaling_steps,
                            input_channels=input_channels,

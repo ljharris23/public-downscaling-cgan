@@ -162,7 +162,7 @@ dates_save = []
 hours_save = []
 data_predict_iter = iter(data_predict)
 for i in range(num_samples):
-    (inputs, outputs) = next(data_predict_iter)
+    inputs, outputs = next(data_predict_iter)
 
     dates_save.append(data_predict.dates[i])
     hours_save.append(data_predict.hours[i])

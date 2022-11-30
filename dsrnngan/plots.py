@@ -81,7 +81,7 @@ def plot_sequences(gen,
             seq_gen.append(gen.predict([cond, const]))
     elif mode == 'VAEGAN':
         # call encoder
-        (mean, logvar) = gen.encoder([cond, const])
+        mean, logvar = gen.encoder([cond, const])
         # run decoder n times
         for i in range(num_instances):
             noise_shape = cond[0, ..., 0].shape + (latent_variables,)
@@ -127,7 +127,7 @@ def plot_rank_histogram(ax, ranks, N_ranks=101, **plot_params):
     db = (bc[1] - bc[0])
     bins = bc - db/2
     bins = np.hstack((bins, bins[-1]+db))
-    (h, _) = np.histogram(ranks, bins=bins)
+    h, _ = np.histogram(ranks, bins=bins)
     h = h / h.sum()
 
     ax.plot(bc, h, **plot_params)
@@ -139,7 +139,7 @@ def plot_rank_cdf(ax, ranks, N_ranks=101, **plot_params):
     db = (bc[1] - bc[0])
     bins = bc - db/2
     bins = np.hstack((bins, bins[-1]+db))
-    (h, _) = np.histogram(ranks, bins=bins)
+    h, _ = np.histogram(ranks, bins=bins)
     h = h.cumsum()
     h = h / h[-1]
 
@@ -155,7 +155,7 @@ def plot_rank_histogram_all(rank_files,
                             lead_time=None,
                             model=None,
                             ablation=False):
-    (fig, axes) = plt.subplots(2, 1, sharex=True, figsize=(6, 3))
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(6, 3))
     if lead_time is not None:
         if threshold:
             fig.suptitle('Rank histograms {} - top {:.2%}'.format(model, freq))
