@@ -52,7 +52,7 @@ def plot_img_log_coastlines(img, value_range_precip=(0.01, 5), cmap='viridis', e
 
 def truncate_colourmap(cmap, minval=0.0, maxval=1.0, n=100):
     new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        f'trunc({cmap.name},{minval:.2f},{maxval:.2f})',
         cmap(np.linspace(minval, maxval, n)))
     return new_cmap
 
@@ -158,12 +158,12 @@ def plot_rank_histogram_all(rank_files,
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(6, 3))
     if lead_time is not None:
         if threshold:
-            fig.suptitle('Rank histograms {} - top {:.2%}'.format(model, freq))
+            fig.suptitle(f'Rank histograms {model} - top {freq:.2%}')
         else:
-            fig.suptitle('Rank histograms {} - all'.format(model))
+            fig.suptitle(f'Rank histograms {model} - all')
     else:
         if threshold:
-            fig.suptitle('Rank histograms - top {:.2%}'.format(freq))
+            fig.suptitle(f'Rank histograms - top {freq:.2%}')
         else:
             fig.suptitle('Rank histograms - all')
     plt.subplots_adjust(hspace=0.15)
@@ -211,19 +211,31 @@ def plot_rank_histogram_all(rank_files,
 
     if lead_time is not None:
         if threshold:
-            plt.savefig("{}/rank-distribution-{}-{}-{}.pdf".format(log_path, 'lead_time', model, freq), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"rank-distribution-lead_time-{model}-{freq}.pdf"),
+                        bbox_inches='tight')
         else:
-            plt.savefig("{}/rank-distribution-{}-{}.pdf".format(log_path, 'lead_time', model), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"rank-distribution-lead_time-{model}.pdf"),
+                        bbox_inches='tight')
     elif ablation:
         if threshold:
-            plt.savefig("{}/rank-distribution-ablation-{}.pdf".format(log_path, freq), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"rank-distribution-ablation-{freq}.pdf"),
+                        bbox_inches='tight')
         else:
-            plt.savefig("{}/rank-distribution-ablation.pdf".format(log_path), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     "rank-distribution-ablation.pdf"),
+                        bbox_inches='tight')
     else:
         if threshold:
-            plt.savefig("{}/rank-distribution-{}.pdf".format(log_path, freq), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"rank-distribution-{freq}.pdf"),
+                        bbox_inches='tight')
         else:
-            plt.savefig("{}/rank-distribution.pdf".format(log_path), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     "rank-distribution.pdf"),
+                        bbox_inches='tight')
     plt.close()
 
 
@@ -293,7 +305,9 @@ def plot_roc_curves(roc_files,
             plt.ylabel('True Positive Rate, TP/(TP+FN)')
             plt.title(f'ROC curve for >{precip_values[i]}mm, {method}')
             plt.legend(loc="lower right")
-            plt.savefig("{}/ROC-{}-{}.pdf".format(log_path, precip_values[i], method), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"ROC-{precip_values[i]}-{method}.pdf"),
+                        bbox_inches='tight')
             plt.close()
 
 
@@ -336,7 +350,9 @@ def plot_prc_curves(prc_files,
             plt.ylabel('Precision TP/(TP+FP)')
             plt.title(f'Precision-recall curve for >{precip_values[i]}mm, {method}')
             plt.legend()
-            plt.savefig("{}/PR-{}-{}.pdf".format(log_path, precip_values[i], method), bbox_inches='tight')
+            plt.savefig(os.path.join(log_path,
+                                     f"PR-{precip_values[i]}-{method}.pdf"),
+                        bbox_inches='tight')
             plt.close()
 
 
@@ -512,8 +528,9 @@ def plot_preds(pred_files,
     cax.tick_params(labelsize=12)
     cb.set_label(units, size=12)
     # cannot save as pdf - will produce artefacts
-    plt.savefig("{}/predictions-{}.png".format(log_path,
-                                               num_samples), bbox_inches='tight')
+    plt.savefig(os.path.join(log_path,
+                             f"predictions-{num_samples}.png"),
+                bbox_inches='tight')
     plt.close()
 
 
@@ -587,6 +604,7 @@ def plot_comparison(files,
     cax.tick_params(labelsize=12)
     cb.set_label(units, size=12)
     # cannot save as pdf - will produce artefacts
-    plt.savefig("{}/comparison-{}.png".format(log_path,
-                                              num_samples), bbox_inches='tight')
+    plt.savefig(os.path.join(log_path,
+                             f"comparison-{num_samples}.png"),
+                bbox_inches='tight')
     plt.close()

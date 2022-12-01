@@ -155,7 +155,7 @@ def plot_fss_curves(*,
         print(f"calculating for model number {model_number}")
         if model_number in model_numbers:
             # only load weights for GAN, not upscaling
-            gen_weights_file = os.path.join(weights_dir, "gen_weights-{:07d}.h5".format(model_number))
+            gen_weights_file = os.path.join(weights_dir, f"gen_weights-{model_number:07d}.h5")
             if not os.path.isfile(gen_weights_file):
                 print(gen_weights_file, "not found, skipping")
                 continue

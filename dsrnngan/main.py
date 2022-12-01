@@ -157,7 +157,7 @@ if __name__ == "__main__":
             training_samples = run_status["training_samples"]
             checkpoint = int(training_samples / (steps_per_checkpoint * batch_size)) + 1
 
-            log_file = "{}/log.txt".format(log_folder)
+            log_file = os.path.join(log_folder, "log.txt")
             log = pd.read_csv(log_file)
             log_list = [log]
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         plot_fname = os.path.join(log_folder, "progress.pdf")
 
         while training_samples < num_samples:  # main training loop
-            print("Checkpoint {}/{}".format(checkpoint, num_checkpoints))
+            print(f"Checkpoint {checkpoint}/{num_checkpoints}")
 
             # train for some number of batches
             loss_log = train.train_model(model=model,
@@ -204,7 +204,7 @@ if __name__ == "__main__":
             log.to_csv(log_file, index=False, float_format="%.6f")
 
             # Save model weights each checkpoint
-            gen_weights_file = os.path.join(model_weights_root, "gen_weights-{:07d}.h5".format(training_samples))
+            gen_weights_file = os.path.join(model_weights_root, f"gen_weights-{training_samples:07d}.h5")
             model.gen.save_weights(gen_weights_file)
 
     else:

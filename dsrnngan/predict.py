@@ -97,7 +97,7 @@ data_paths = read_config.get_data_paths()
 if args.predict_full_image:
     batch_size = 1
 
-weights_fn = os.path.join(log_folder, 'models', 'gen_weights-{}.h5'.format(model_number))
+weights_fn = os.path.join(log_folder, 'models', f'gen_weights-{model_number}.h5')
 dates = get_dates(predict_year)
 
 if problem_type == "normal":
@@ -346,10 +346,8 @@ else:
         cb.set_label(units, size=8)
 
 # cannot save as pdf - will produce artefacts
-plt.savefig("{}/prediction-and-inputs-{}-{}-{}.png".format(log_folder,
-                                                           model_number,
-                                                           problem_type,
-                                                           plot_label),
+plt.savefig(os.path.join(log_folder,
+                         f"prediction-and-inputs-{model_number}-{problem_type}-{plot_label}.png"),
             bbox_inches='tight')
 plt.close()
 
@@ -414,10 +412,9 @@ cax.tick_params(labelsize=12)
 cb.set_label(units, size=12)
 
 # cannot save as pdf - will produce artefacts
-plt.savefig("{}/predictions-{}-{}-{}.png".format(log_folder,
-                                                 model_number,
-                                                 problem_type,
-                                                 plot_label), bbox_inches='tight')
+plt.savefig(os.path.join(log_folder,
+                         f"predictions-{model_number}-{problem_type}-{plot_label}.png"),
+            bbox_inches='tight')
 plt.close()
 gc.collect()
 
@@ -427,10 +424,8 @@ if args.plot_rapsd:
     colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
     plot_scales = [512, 256, 128, 64, 32, 16, 8, 4]
     # create a PdfPages object to save multiple plots to same pdf
-    pdf = PdfPages("{}/RAPSD-{}-{}-{}.pdf".format(log_folder,
-                                                  model_number,
-                                                  problem_type,
-                                                  plot_label))
+    pdf = PdfPages(os.path.join(log_folder,
+                                f"RAPSD-{model_number}-{problem_type}-{plot_label}.pdf"))
 
     for k in range(num_samples):
         fig, ax = plt.subplots()

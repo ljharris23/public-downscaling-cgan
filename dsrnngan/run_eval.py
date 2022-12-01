@@ -47,7 +47,7 @@ if mode in ("GAN", "VAEGAN"):
 elif mode == "det":
     ensemble_size = 1
 
-out_fn = "{}/eval_{}.txt".format(log_folder, str(val_years))
+out_fn = os.path.join(log_folder, f"eval_{val_years}.txt")
 
 evaluation.evaluate_multiple_checkpoints(mode=mode,
                                          arch=arch,

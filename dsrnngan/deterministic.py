@@ -70,8 +70,8 @@ class Deterministic(object):
 
             if show_progress:
                 losses = []
-                for (i, l) in enumerate([loss]):
-                    losses.append(("Loss {}".format(i), l))
+                for i, l in enumerate([loss]):
+                    losses.append((f"Loss {i}", l))
                 progbar.add(batch_size, values=losses)
 
             loss_log["gen_loss"] = loss
