@@ -49,9 +49,7 @@ def setup_inputs(*,
     # always uses full-sized images
     print('Loading full sized image dataset')
     _, data_gen_valid = setupdata.setup_data(
-        load_full_image=True,
         val_years=val_years,
-        batch_size=1,
         autocoarsen=autocoarsen)
     return gen, data_gen_valid
 

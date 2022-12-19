@@ -140,14 +140,12 @@ if __name__ == "__main__":
             CLtype=CLtype,
             content_loss_weight=content_loss_weight)
 
-        batch_gen_train, batch_gen_valid = setupdata.setup_data(
+        batch_gen_train, data_gen_valid = setupdata.setup_data(
             train_years=train_years,
             val_years=val_years,
-            val_size=val_size,
             autocoarsen=autocoarsen,
             weights=training_weights,
-            batch_size=batch_size,
-            load_full_image=False)
+            batch_size=batch_size)
 
         if args.restart:  # load weights and run status
 
@@ -176,12 +174,12 @@ if __name__ == "__main__":
             loss_log = train.train_model(model=model,
                                          mode=mode,
                                          batch_gen_train=batch_gen_train,
-                                         batch_gen_valid=batch_gen_valid,
+                                         data_gen_valid=data_gen_valid,
                                          noise_channels=noise_channels,
                                          latent_variables=latent_variables,
                                          checkpoint=checkpoint,
                                          steps_per_checkpoint=steps_per_checkpoint,
-                                         plot_samples=val_size,
+                                         num_cases=val_size,
                                          plot_fn=plot_fname)
 
             training_samples += steps_per_checkpoint * batch_size

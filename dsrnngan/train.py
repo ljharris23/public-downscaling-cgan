@@ -6,12 +6,12 @@ def train_model(*,
                 model=None,
                 mode=None,
                 batch_gen_train=None,
-                batch_gen_valid=None,
+                data_gen_valid=None,
                 noise_channels=None,
                 latent_variables=None,
                 checkpoint=None,
                 steps_per_checkpoint=None,
-                plot_samples=8,
+                num_cases=8,
                 plot_fn=None):
 
     for cond, _, _ in batch_gen_train.take(1).as_numpy_iterator():
@@ -36,11 +36,12 @@ def train_model(*,
 
     plots.plot_sequences(model.gen,
                          mode,
-                         batch_gen_valid,
+                         data_gen_valid,
                          checkpoint,
                          noise_channels=noise_channels,
                          latent_variables=latent_variables,
-                         num_samples=plot_samples,
+                         num_cases=num_cases,  # number of examples to plot
+                         ens_size=4,  # number of ensemble members to draw for each example
                          out_fn=plot_fn)
 
     return loss_log

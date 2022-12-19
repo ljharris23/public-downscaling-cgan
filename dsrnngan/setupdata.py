@@ -6,32 +6,19 @@ from tfrecords_generator import DataGenerator
 from data import all_fcst_fields
 
 
+# Incredibly slim wrapper around tfrecords_generator.DataGenerator.  Can probably remove...
 def setup_batch_gen(train_years,
-                    val_years,
-                    batch_size=64,
-                    val_size=None,
+                    batch_size=16,
                     autocoarsen=False,
-                    weights=None,
-                    val_fixed=True):
+                    weights=None):
 
     tfrecords_generator.return_dic = False
     print(f"autocoarsen flag is {autocoarsen}")
-    train = None if train_years is None \
-        else DataGenerator(train_years,
-                           batch_size=batch_size,
-                           autocoarsen=autocoarsen, weights=weights)
-
-    # note -- using create_fixed_dataset with a batch size not divisible by 16 will cause problems [is this true?]
-    # create_fixed_dataset will not take a list
-    if val_size is not None:
-        # assume that val_size is small enough that we can just use one batch
-        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=val_size, autocoarsen=autocoarsen)
-        val = val.take(1)
-        if val_fixed:
-            val = val.cache()
-    else:
-        val = tfrecords_generator.create_fixed_dataset(val_years, batch_size=batch_size, autocoarsen=autocoarsen)
-    return train, val
+    batch_gen_train = DataGenerator(train_years,
+                                    batch_size=batch_size,
+                                    autocoarsen=autocoarsen,
+                                    weights=weights)
+    return batch_gen_train
 
 
 def setup_full_image_dataset(years,
@@ -56,30 +43,19 @@ def setup_full_image_dataset(years,
 
 def setup_data(train_years=None,
                val_years=None,
-               val_size=None,
                autocoarsen=False,
                weights=None,
-               batch_size=None,
-               load_full_image=False):
+               batch_size=None):
 
-    if load_full_image:
-        batch_gen_train = None if train_years is None \
-            else setup_full_image_dataset(train_years,
-                                          batch_size=batch_size,
-                                          autocoarsen=autocoarsen)
-        batch_gen_valid = None if val_years is None \
-            else setup_full_image_dataset(val_years,
-                                          batch_size=batch_size,
-                                          autocoarsen=autocoarsen)
+    batch_gen_train = None if train_years is None \
+        else setup_batch_gen(train_years=train_years,
+                             batch_size=batch_size,
+                             autocoarsen=autocoarsen,
+                             weights=weights)
 
-    else:
-        batch_gen_train, batch_gen_valid = setup_batch_gen(
-            train_years=train_years,
-            val_years=val_years,
-            batch_size=batch_size,
-            val_size=val_size,
-            autocoarsen=autocoarsen,
-            weights=weights)
+    data_gen_valid = None if val_years is None \
+        else setup_full_image_dataset(val_years,
+                                      autocoarsen=autocoarsen)
 
     gc.collect()
-    return batch_gen_train, batch_gen_valid
+    return batch_gen_train, data_gen_valid

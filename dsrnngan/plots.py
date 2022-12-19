@@ -59,41 +59,18 @@ def truncate_colourmap(cmap, minval=0.0, maxval=1.0, n=100):
 
 def plot_sequences(gen,
                    mode,
-                   batch_gen,
+                   data_gen,
                    checkpoint,
                    noise_channels,
                    latent_variables,
-                   num_samples=8,
-                   num_instances=4,
+                   num_cases,
+                   ens_size=4,
                    out_fn=None):
 
-    for cond, const, seq_real in batch_gen.as_numpy_iterator():
-        batch_size = cond.shape[0]
+    data_gen_iter = iter(data_gen)
 
-    seq_gen = []
-    if mode == 'GAN':
-        for i in range(num_instances):
-            noise_shape = cond[0, ..., 0].shape + (noise_channels,)
-            noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-            seq_gen.append(gen.predict([cond, const, noise_gen()]))
-    elif mode == 'det':
-        for i in range(num_instances):
-            seq_gen.append(gen.predict([cond, const]))
-    elif mode == 'VAEGAN':
-        # call encoder
-        mean, logvar = gen.encoder([cond, const])
-        # run decoder n times
-        for i in range(num_instances):
-            noise_shape = cond[0, ..., 0].shape + (latent_variables,)
-            noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
-            seq_gen.append(gen.decoder.predict([mean, logvar, noise_gen(), const]))
-
-    seq_real = data.denormalise(seq_real)
-    cond = data.denormalise(cond)
-    seq_gen = [data.denormalise(seq) for seq in seq_gen]
-
-    num_rows = num_samples
-    num_cols = 2+num_instances
+    num_rows = num_cases
+    num_cols = 2+ens_size
 
     figsize = (num_cols*1.5, num_rows*1.5)
     plt.figure(figsize=figsize)
@@ -101,18 +78,45 @@ def plot_sequences(gen,
     gs = gridspec.GridSpec(num_rows, num_cols,
                            wspace=0.05, hspace=0.05)
 
-    value_range = (0, 5)  # batch_gen.decoder.value_range
+    value_range = (0, 5)
 
-    for s in range(num_samples):
-        i = s
-        plt.subplot(gs[i, 0])
-        plot_img(seq_real[s, :, :, 0], value_range=value_range)
-        plt.subplot(gs[i, 1])
-        plot_img(cond[s, :, :, 0], value_range=value_range)
-        for k in range(num_instances):
-            j = 2+k
-            plt.subplot(gs[i, j])
-            plot_img(seq_gen[k][s, :, :, 0], value_range=value_range)
+    for kk in range(num_cases):
+        inputs, outputs = next(data_gen_iter)
+        cond = inputs['lo_res_inputs']
+        const = inputs['hi_res_inputs']
+        seq_real = outputs['output']
+
+        seq_gen = []
+        batch_size = cond.shape[0]
+
+        if mode == 'GAN':
+            for ii in range(ens_size):
+                noise_shape = cond[0, ..., 0].shape + (noise_channels,)
+                noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
+                seq_gen.append(gen.predict([cond, const, noise_gen()]))
+        elif mode == 'det':
+            for ii in range(ens_size):
+                seq_gen.append(gen.predict([cond, const]))
+        elif mode == 'VAEGAN':
+            # call encoder
+            mean, logvar = gen.encoder([cond, const])
+            # run decoder n times
+            for ii in range(ens_size):
+                noise_shape = cond[0, ..., 0].shape + (latent_variables,)
+                noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
+                seq_gen.append(gen.decoder.predict([mean, logvar, noise_gen(), const]))
+
+        seq_real = data.denormalise(seq_real)
+        cond = data.denormalise(cond)
+        seq_gen = [data.denormalise(seq) for seq in seq_gen]
+
+        plt.subplot(gs[kk, 0])
+        plot_img(seq_real[0, :, :], value_range=value_range)
+        plt.subplot(gs[kk, 1])
+        plot_img(cond[0, :, :, 0], value_range=value_range)
+        for ll in range(ens_size):
+            plt.subplot(gs[kk, ll+2])
+            plot_img(seq_gen[ll][0, :, :, 0], value_range=value_range)
 
     plt.suptitle('Checkpoint ' + str(checkpoint))
 
