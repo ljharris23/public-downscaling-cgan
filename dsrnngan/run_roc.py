@@ -10,7 +10,6 @@ read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 log_folder = '/network/group/aopp/predict/TIP018_HARRIS_TENSORFL/andrew-output/rev-mainGAN'; model_numbers = [460800]  # noqa: E702
 calc_upsample = True
 predict_year = 2020
-predict_full_image = True
 ensemble_members = 100
 
 model_weights_root = os.path.join(log_folder, "models")
@@ -42,6 +41,5 @@ roc.calculate_roc(mode=mode,
                   latent_variables=latent_variables,
                   padding=padding,
                   predict_year=predict_year,
-                  predict_full_image=predict_full_image,
                   ensemble_members=ensemble_members,
                   calc_upsample=calc_upsample)

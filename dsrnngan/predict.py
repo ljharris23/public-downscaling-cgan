@@ -20,7 +20,6 @@ from noise import NoiseGenerator
 from plots import plot_img_log_coastlines, truncate_colourmap
 from rapsd import plot_spectrum1d, rapsd
 from setupmodel import setup_model
-from tfrecords_generator import create_fixed_dataset
 
 read_config.set_gpu_mode()  # set up whether to use GPU, and mem alloc mode
 downscaling_steps = read_config.read_downscaling_factor()["steps"]
@@ -56,12 +55,7 @@ parser.add_argument('--num_samples', type=int,
                     help="number of images to generate predictions for", default=5)
 parser.add_argument('--pred_ensemble_size', type=int,
                     help="size of prediction ensemble", default=3)
-parser.add_argument('--batch_size', type=int,
-                    help="batch size", default=4)
-parser.set_defaults(predict_full_image=False)
 parser.set_defaults(plot_rapsd=False)
-parser.add_argument('--predict_full_image', dest='predict_full_image', action='store_true',
-                    help="Predict on full images")
 parser.add_argument('--plot_rapsd', dest='plot_rapsd', action='store_true',
                     help="Plot Radially Averaged Power Spectral Density")
 args = parser.parse_args()
@@ -94,8 +88,7 @@ lr_gen = float(lr_gen)
 
 data_paths = read_config.get_data_paths()
 
-if args.predict_full_image:
-    batch_size = 1
+batch_size = 1
 
 weights_fn = os.path.join(log_folder, 'models', f'gen_weights-{model_number}.h5')
 dates = get_dates(predict_year)
@@ -110,23 +103,17 @@ elif problem_type == "autocoarsen":
     input_channels = 1  # autocoarsen problem doesn't have all 9 input fields
 
 # load appropriate dataset
-if args.predict_full_image:
-    plot_label = 'large'
-    data_predict = DataGeneratorFull(dates=dates,
-                                     fcst_fields=all_fcst_fields,
-                                     batch_size=batch_size,
-                                     log_precip=True,
-                                     shuffle=True,
-                                     constants=True,
-                                     hour='random',
-                                     fcst_norm=True,
-                                     autocoarsen=autocoarsen)
+plot_label = 'large'
+data_predict = DataGeneratorFull(dates=dates,
+                                 fcst_fields=all_fcst_fields,
+                                 batch_size=batch_size,
+                                 log_precip=True,
+                                 shuffle=True,
+                                 constants=True,
+                                 hour='random',
+                                 fcst_norm=True,
+                                 autocoarsen=autocoarsen)
 
-else:
-    plot_label = 'small'
-    data_predict = create_fixed_dataset(predict_year,
-                                        batch_size=batch_size,
-                                        autocoarsen=autocoarsen)
 
 # initialise model
 model = setup_model(mode=mode,
@@ -141,7 +128,7 @@ model = setup_model(mode=mode,
                     lr_gen=lr_gen)
 gen = model.gen
 if mode == "VAEGAN":
-    _init_VAEGAN(gen, data_predict, args.predict_full_image, batch_size, latent_variables)
+    _init_VAEGAN(gen, data_predict, True, batch_size, latent_variables)
 gen.load_weights(weights_fn)
 
 # dataset for benchmarks
@@ -184,11 +171,8 @@ for i in range(num_samples):
     seq_cond.append(input_conditions)
 
     # make sure ground truth image has correct dimensions
-    if args.predict_full_image:
-        sample = np.expand_dims(np.array(outputs['output']), axis=-1)
-        seq_real.append(data.denormalise(sample))
-    else:
-        seq_real.append(data.denormalise(outputs['output']))
+    sample = np.expand_dims(np.array(outputs['output']), axis=-1)
+    seq_real.append(data.denormalise(sample))
 
     pred_ensemble = []
     if mode == 'det':  # this is plotting det as a model

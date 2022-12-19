@@ -128,6 +128,7 @@ def create_dataset(year,
         return ds
 
 
+# create_fixed_dataset currently unused; full image dataset used for validation
 def create_fixed_dataset(year=None,
                          mode='validation',
                          batch_size=16,
@@ -230,8 +231,9 @@ def write_data(year,
             fh.close()
 
 
+# currently unused; was previously used to make small-image validation dataset,
+# but this is now obsolete
 def save_dataset(tfrecords_dataset, flename, max_batches=None):
-
     assert return_dic, "Only works with return_dic=True"
     flename = os.path.join(records_folder, flename)
     fle_hdle = tf.io.TFRecordWriter(flename)

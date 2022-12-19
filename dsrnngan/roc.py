@@ -14,7 +14,6 @@ from evaluation import _init_VAEGAN
 from noise import NoiseGenerator
 from pooling import pool
 from read_config import read_downscaling_factor
-from tfrecords_generator import create_fixed_dataset
 
 
 def calculate_roc(*,
@@ -30,7 +29,6 @@ def calculate_roc(*,
                   latent_variables,
                   padding,
                   predict_year,
-                  predict_full_image,
                   ensemble_members,
                   calc_upsample):
 
@@ -47,12 +45,8 @@ def calculate_roc(*,
     else:
         raise Exception("no such problem type, try again!")
 
-    if predict_full_image:
-        batch_size = 1  # this will stop your computer having a strop
-        num_batches = 256
-    else:
-        batch_size = 16
-        num_batches = 50
+    batch_size = 1
+    num_batches = 256
 
     if mode == 'det':
         ensemble_members = 1  # in this case, only used for printing
@@ -73,26 +67,18 @@ def calculate_roc(*,
                                    padding=padding)
 
     # load appropriate dataset
-    if predict_full_image:
-        dates = get_dates(predict_year)
-        data_predict = DataGeneratorFull(dates=dates,
-                                         fcst_fields=all_fcst_fields,
-                                         batch_size=batch_size,
-                                         log_precip=True,
-                                         shuffle=True,
-                                         constants=True,
-                                         hour='random',
-                                         fcst_norm=True,
-                                         autocoarsen=autocoarsen)
-
-    if not predict_full_image:
-        data_predict = create_fixed_dataset(predict_year,
-                                            batch_size=batch_size,
-                                            autocoarsen=autocoarsen)
+    dates = get_dates(predict_year)
+    data_predict = DataGeneratorFull(dates=dates,
+                                     fcst_fields=all_fcst_fields,
+                                     batch_size=batch_size,
+                                     log_precip=True,
+                                     shuffle=True,
+                                     constants=True,
+                                     hour='random',
+                                     fcst_norm=True,
+                                     autocoarsen=autocoarsen)
 
     if calc_upsample:
-        if not predict_full_image:
-            raise RuntimeError('Data generator for benchmarks not implemented for small images')
         # requires a different data generator with different fields and no fcst_norm
         data_benchmarks = DataGeneratorFull(dates=dates,
                                             fcst_fields=all_fcst_fields,
@@ -126,7 +112,7 @@ def calculate_roc(*,
                 continue
             print(gen_weights_file)
             if mode == "VAEGAN":
-                _init_VAEGAN(model.gen, data_predict, predict_full_image, batch_size, latent_variables)
+                _init_VAEGAN(model.gen, data_predict, True, batch_size, latent_variables)
             model.gen.load_weights(gen_weights_file)
 
         y_true = {}
@@ -150,10 +136,7 @@ def calculate_roc(*,
                 # GAN, not upscale
                 inputs, outputs = next(data_pred_iter)
                 # need to denormalise
-                if predict_full_image:
-                    im_real = data.denormalise(outputs['output']).astype(np.single)  # shape: batch_size x H x W
-                else:
-                    im_real = (data.denormalise(outputs['output'])[..., 0]).astype(np.single)
+                im_real = data.denormalise(outputs['output']).astype(np.single)  # shape: batch_size x H x W
             else:
                 # upscale, no need to denormalise
                 inputs, outputs = next(data_benchmarks_iter)
