@@ -37,7 +37,7 @@ def get_dates(year):
     return sorted(dates)
 
 
-def load_radar(date, hour, log_precip=False, aggregate=1):
+def load_radar_and_mask(date, hour, log_precip=False, aggregate=1):
     year = date[:4]
     data_path = os.path.join(RADAR_PATH, year, f"metoffice-c-band-rain-radar_uk_{date}.nc")
     data = xr.open_dataset(data_path)
@@ -46,10 +46,16 @@ def load_radar(date, hour, log_precip=False, aggregate=1):
     data.close()
     # The remapping of the NIMROD radar left a few negative numbers, so remove those
     y[y < 0.0] = 0.0
+
+    # mask: False for valid radar data, True for invalid radar data
+    # (compatible with the NumPy masked array functionality)
+    # if all data is valid:
+    mask = np.full(y.shape, False, dtype=bool)
+
     if log_precip:
-        return np.log10(1+y)
+        return np.log10(1+y), mask
     else:
-        return y
+        return y, mask
 
 
 def logprec(y, log_precip=True):
@@ -77,8 +83,9 @@ def load_hires_constants(batch_size=1):
 
 def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=False,
                           constants=False, hour=0, norm=False):
-    batch_x = []
-    batch_y = []
+    batch_x = []  # forecast
+    batch_y = []  # radar
+    batch_mask = []  # mask
 
     if type(hour) == str:
         if hour == 'random':
@@ -93,12 +100,14 @@ def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=F
     for i, date in enumerate(batch_dates):
         h = hours[i]
         batch_x.append(load_fcst_stack(fcst_fields, date, h, log_precip=log_precip, norm=norm))
-        batch_y.append(load_radar(date, h, log_precip=log_precip))
+        radar, mask = load_radar_and_mask(date, h, log_precip=log_precip)
+        batch_y.append(radar)
+        batch_mask.append(mask)
 
     if (not constants):
-        return np.array(batch_x), np.array(batch_y)
+        return np.array(batch_x), np.array(batch_y), np.array(batch_mask)
     else:
-        return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y)
+        return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y), np.array(batch_mask)
 
 
 def load_fcst(ifield, date, hour, log_precip=False, norm=False):

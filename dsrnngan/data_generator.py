@@ -70,7 +70,7 @@ class DataGenerator(Sequence):
         hours_batch = self.hours[idx*self.batch_size:(idx+1)*self.batch_size]
 
         # Load and return this batch of images
-        data_x_batch, data_y_batch = load_fcst_radar_batch(
+        data_x_batch, data_y_batch, data_mask_batch = load_fcst_radar_batch(
             dates_batch,
             fcst_fields=self.fcst_fields,
             log_precip=self.log_precip,
@@ -81,11 +81,14 @@ class DataGenerator(Sequence):
             data_x_batch = self._dataset_autocoarsener(data_y_batch[..., np.newaxis])
 
         if self.constants is None:
-            return {"lo_res_inputs": data_x_batch}, {"output": data_y_batch}
+            return {"lo_res_inputs": data_x_batch},\
+                   {"output": data_y_batch,
+                    "mask": data_mask_batch}
         else:
             return {"lo_res_inputs": data_x_batch,
                     "hi_res_inputs": self.constants},\
-                    {"output": data_y_batch}
+                   {"output": data_y_batch,
+                    "mask": data_mask_batch}
 
     def shuffle_data(self):
         assert len(self.hours) == len(self.dates)
