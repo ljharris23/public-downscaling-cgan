@@ -54,18 +54,14 @@ def setup_inputs(*,
     return gen, data_gen_valid
 
 
-def _init_VAEGAN(gen, data_gen, load_full_image, batch_size, latent_variables):
-    # load_full_image is actually a proxy for "dict or not?" -- TODO fix
+def _init_VAEGAN(gen, data_gen, batch_size, latent_variables):
     if False:
         # this runs the model on one batch, which is what the internet says
         # but this doesn't actually seem to be necessary?!
         data_gen_iter = iter(data_gen)
-        if load_full_image:
-            inputs, outputs = next(data_gen_iter)
-            cond = inputs['lo_res_inputs']
-            const = inputs['hi_res_inputs']
-        else:
-            cond, const, _ = next(data_gen_iter)
+        inputs, _ = next(data_gen_iter)
+        cond = inputs['lo_res_inputs']
+        const = inputs['hi_res_inputs']
 
         noise_shape = np.array(cond)[0, ..., 0].shape + (latent_variables,)
         noise_gen = NoiseGenerator(noise_shape, batch_size=batch_size)
@@ -306,7 +302,7 @@ def evaluate_multiple_checkpoints(*,
 
         print(gen_weights_file)
         if mode == "VAEGAN":
-            _init_VAEGAN(gen, data_gen_valid, True, 1, latent_variables)
+            _init_VAEGAN(gen, data_gen_valid, 1, latent_variables)
         gen.load_weights(gen_weights_file)
         arrays, crps, other = eval_one_chkpt(mode=mode,
                                              gen=gen,

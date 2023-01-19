@@ -128,7 +128,7 @@ model = setup_model(mode=mode,
                     lr_gen=lr_gen)
 gen = model.gen
 if mode == "VAEGAN":
-    _init_VAEGAN(gen, data_predict, True, batch_size, latent_variables)
+    _init_VAEGAN(gen, data_predict, batch_size, latent_variables)
 gen.load_weights(weights_fn)
 
 # dataset for benchmarks

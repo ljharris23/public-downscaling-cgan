@@ -112,7 +112,7 @@ def calculate_roc(*,
                 continue
             print(gen_weights_file)
             if mode == "VAEGAN":
-                _init_VAEGAN(model.gen, data_predict, True, batch_size, latent_variables)
+                _init_VAEGAN(model.gen, data_predict, batch_size, latent_variables)
             model.gen.load_weights(gen_weights_file)
 
         y_true = {}

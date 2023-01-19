@@ -147,7 +147,7 @@ def plot_fss_curves(*,
                 continue
             print(gen_weights_file)
             if mode == "VAEGAN":
-                _init_VAEGAN(model.gen, data_predict, True, batch_size, latent_variables)
+                _init_VAEGAN(model.gen, data_predict, batch_size, latent_variables)
             model.gen.load_weights(gen_weights_file)
 
         if model_number in model_numbers:
