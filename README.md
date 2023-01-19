@@ -65,7 +65,7 @@ At this point, you may wish to visualise the data returned by the `DataGenerator
 
 You will want to manually run the function `gen_fcst_norm` in `data.py`.  This gives certain field statistics (mean, standard dev., max, etc.) that are used for normalising inputs to the neural networks during training.  The NN performance should not be sensitive to the exact values of these, so it will be fine to run for just 1 year (among the training data years)
 
-Next, you will want to manually run the function `write_data` in `tfrecords_generator.py` for each year of training data.  This generates training data by subsampling the full-size images.  This function has various hard-coded constants, including the low-resolution image size (assumed square!  do edit the code if this is not true...), and the upscaling factor.  Make sure you adjust these to your own purpose.
+Next, you will want to manually run the function `write_data` in `tfrecords_generator.py` for each year of training data.  This generates training data by subsampling the full-size images.  This function has various hard-coded constants, including the low-resolution image size (assumed square!  do edit the code if this is not true...), the size of the subsampled images, and the number of samples taken from each full image.  Make sure you adjust these to your own purpose.
 
 The training data is separated into several bins/classes, according to what proportion of the image has rainfall.  You may wish to edit how this is performed!
 
@@ -128,17 +128,17 @@ Optional arguments:
 		    to 1 for obvious reasons.
 
 There are also the following optional arguments:
-- `--predict_full_image`          to predict on the full image dataset
+- `--plot_rapsd`              to plot the power spectrum curves
 
 For example:
 
 `python predict.py --log_folder /path/to/model --model_number 0006400 
---num_samples 7 --predict_full_image`
+--num_samples 5 --pred_ensemble_size 3 --plot_rapsd`
 
 4. If you want to do some evaluation on specific checkpoints only, you can
 use the scripts
 
-- `run_eval.py`, to run CRPS, rank calculations, RMSE, RALSD, etc.  Note this uses 100 ensemble members, rather than the 10 used for intermediate checkpoint evaluation via `main.py`
+- `run_eval.py`, to run CRPS, rank calculations, RMSE, RALSD, etc.  Note this uses 100 ensemble members, rather than the 10 used for intermediate checkpoint evaluation via `main.py`.  This script is intended to be used with a very small number of checkpoints, e.g., a single 'best' checkpoint.
 - `run_roc.py`, to run ROC and precision-recall curve calculations
 - `run_fss.py`, to run fractions skill score calculations
 
@@ -146,19 +146,24 @@ You'll have to open them and hardcode file paths and model numbers at the
 top. I also made a plot_comparisons.py at one point but I've deleted it so
 now you have to use predict.py. Sorry.
 
-5. If you want to change model architectures, add them to the `models.py`
-file. You can then use the `config.yaml` file to call a different model
-architecture. We recommend not deleting the old one just yet.
+5. If you want to change model architectures, add them to the `models.py` and `setupmodel.py` files. You can then use the `config.yaml` file to call a different model architecture. We suggest that small tweaks to the existing architecture continue to use `models.generator`/`models.discriminator`, but with a new "architecture name" `arch`, and the changes are made conditional on the architecture name. For completely different architectures, write an entirely new architecture function such as `generator2`, and use this in the `setupmodel.py` dictionaries.
 
-6. `run_benchmarks.py` will generate benchmark scores for CRPS, RMSE, MAE
-and RAPSD for the specified benchmark models (input arguments). We have
-set this up to use the same evaluation setup as the NN models but note
-the benchmark evaluation uses 100 ensemble members (NN default is 10 for
-time & memory reasons). So, for a proper comparison you *must* evaluate
-your model and specify 100 ensemble members.
+6. `run_benchmarks.py` will generate scores for CRPS, RMSE, MAE and RAPSD for particular simple comparison 'benchmark' models. We supply two simple models by default:
+
+- nearest neighbour upsampling, which takes the low-resolution input forecast and repeats each pixel several times in each direction
+- zero forecast, a forecast of zero rainfall everywhere
+
+You are, of course, welcome to add more sophisticated comparison approaches of your own. In the paper, we used a re-implementation of the ecPoint approach. However, since some manual tweaking is involved, and in order to avoid any confusion with the official ECMWF ecPoint product, we have not included that approach in the public version of this code.
+
+We have set `run_benchmarks.py` up to use the same evaluation setup as the NN models, and with 100 ensemble members. For a proper comparison, make sure you evaluated your neural network model with 100 ensemble members.
 
 For example:
 `python run_benchmarks.py --log_folder /path/to/model --predict_year 2020 --num_images 16`
 
-7. This is research code so please let us know if something is wrong and
+7. We support two problem types, "normal" and "autocoarsen".
+
+- normal: separate input and output datasets, loaded from user-specified files, assumed to represent forecast data and 'truth' data.
+- autocoarsen: the input dataset is automatically created by coarsening the 'truth' data. The forecast data is ignored. This is a somewhat easier version of the downscaling problem since it removes the forecast error component of the problem. See `main.py`, `data_generator.py` and `tfrecords_generator.py` for exact implementation details.
+
+8. This is research code so please let us know if something is wrong and
 also note that it definitely isn't perfect :)

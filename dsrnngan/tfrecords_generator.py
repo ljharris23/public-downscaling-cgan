@@ -149,7 +149,7 @@ def _float_feature(list_of_floats):  # float32
 def write_data(year,
                fcst_fields=all_fcst_fields,
                hours=fcst_hours,
-               img_chunk_width=20,
+               img_chunk_width=20,  # controls size of subsampled image
                num_class=4,
                log_precip=True,
                fcst_norm=True):
@@ -158,11 +158,11 @@ def write_data(year,
 
     dates = get_dates(year)
 
-    # nim_size = 940
-    img_size = 94
+    img_size = 94  # change this to your low-res image size!
 
     scaling_factor = ds_fac
 
+    # chosen to approximately cover the full image, but can be changed!
     nsamples = (img_size//img_chunk_width + 1)**2
     print("Samples per image:", nsamples)
     import random
@@ -208,7 +208,14 @@ def write_data(year,
                     features = tf.train.Features(feature=feature)
                     example = tf.train.Example(features=features)
                     example_to_string = example.SerializeToString()
-                    clss = min(int(np.floor(((radar > 0.1).mean()*num_class))), num_class-1)  # all class binning is here!
+
+                    # all class binning is in this one line.
+                    # as written, calculates proportion of image with "some rain"
+                    # [specifically, log10(1 + rainfall) > 0.1]
+                    # and bins into one of 4 classes: 0-25%, 25-50%, 50-75%, 75-100%
+                    # feel free to replace with a different binning strategy!
+                    clss = min(int(np.floor(((radar > 0.1).mean()*num_class))), num_class-1)
+
                     fle_hdles[clss].write(example_to_string)
         for fh in fle_hdles:
             fh.close()
