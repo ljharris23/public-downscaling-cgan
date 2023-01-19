@@ -14,10 +14,12 @@ def train_model(*,
                 num_cases=8,
                 plot_fn=None):
 
-    for cond, _, _ in batch_gen_train.take(1).as_numpy_iterator():
+    for inputs, _ in batch_gen_train.take(1).as_numpy_iterator():
+        cond = inputs["lo_res_inputs"]
         img_shape = cond.shape[1:-1]
         batch_size = cond.shape[0]
     del cond
+    del inputs
 
     if mode == 'GAN':
         noise_shape = (img_shape[0], img_shape[1], noise_channels)

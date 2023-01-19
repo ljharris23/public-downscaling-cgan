@@ -1,9 +1,7 @@
 import gc
 
-import tfrecords_generator
-from tfrecords_generator import DataGenerator
-
 from data import all_fcst_fields
+from tfrecords_generator import DataGenerator
 
 
 # Incredibly slim wrapper around tfrecords_generator.DataGenerator.  Can probably remove...
@@ -12,7 +10,6 @@ def setup_batch_gen(train_years,
                     autocoarsen=False,
                     weights=None):
 
-    tfrecords_generator.return_dic = False
     print(f"autocoarsen flag is {autocoarsen}")
     batch_gen_train = DataGenerator(train_years,
                                     batch_size=batch_size,

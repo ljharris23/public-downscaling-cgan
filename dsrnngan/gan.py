@@ -168,9 +168,11 @@ class WGANGP(object):
               training_ratio=1, show_progress=True):
 
         disc_target_real = None
-        for tmp_batch, _, _ in batch_gen.take(1).as_numpy_iterator():
+        for inputs, _ in batch_gen.take(1).as_numpy_iterator():
+            tmp_batch = inputs["lo_res_inputs"]
             batch_size = tmp_batch.shape[0]
         del tmp_batch
+        del inputs
         if show_progress:
             # Initialize progbar and batch counter
             progbar = generic_utils.Progbar(num_gen_batches*batch_size)
@@ -193,7 +195,10 @@ class WGANGP(object):
             disc_loss_n = 0
             for rep in range(training_ratio):
                 # generate some real samples
-                cond, const, sample = batch_gen_iter.get_next()
+                inputs, outputs = batch_gen_iter.get_next()
+                cond = inputs["lo_res_inputs"]
+                const = inputs["hi_res_inputs"]
+                sample = outputs["output"]
 
                 with Nontrainable(self.gen):
                     dl = self.disc_trainer.train_on_batch(
@@ -210,7 +215,11 @@ class WGANGP(object):
             disc_loss /= disc_loss_n
 
             with Nontrainable(self.disc):
-                cond, const, sample = batch_gen_iter.get_next()
+                inputs, outputs = batch_gen_iter.get_next()
+                cond = inputs["lo_res_inputs"]
+                const = inputs["hi_res_inputs"]
+                sample = outputs["output"]
+
                 condconst = [cond, const]
                 if self.ensemble_size is None:
                     gt_outputs = [gen_target]

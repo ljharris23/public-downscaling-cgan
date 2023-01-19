@@ -8,8 +8,6 @@ import read_config
 from data import all_fcst_fields, fcst_hours
 
 
-return_dic = True
-
 data_paths = read_config.get_data_paths()
 records_folder = data_paths["TFRecords"]["tfrecords_path"]
 ds_fac = read_config.read_downscaling_factor()["downscaling_factor"]
@@ -45,10 +43,8 @@ def create_mixed_dataset(year,
     sampled_ds = tf.data.Dataset.sample_from_datasets(datasets,
                                                       weights=weights).batch(batch_size)
 
-    if autocoarsen and return_dic:
+    if autocoarsen:
         sampled_ds = sampled_ds.map(_dataset_autocoarsener)
-    elif autocoarsen and not return_dic:
-        sampled_ds = sampled_ds.map(_dataset_autocoarsener_list)
     sampled_ds = sampled_ds.prefetch(2)
     return sampled_ds
 
@@ -66,14 +62,6 @@ def _dataset_autocoarsener(inputs, outputs):
     return inputs, outputs
 
 
-def _dataset_autocoarsener_list(inputs, constants, outputs):
-    image = outputs
-    kernel_tf = tf.constant(1.0/(ds_fac*ds_fac), shape=(ds_fac, ds_fac, 1, 1), dtype=tf.float32)
-    image = tf.nn.conv2d(image, filters=kernel_tf, strides=[1, ds_fac, ds_fac, 1], padding='VALID', name='conv_debug', data_format='NHWC')
-    inputs = image
-    return inputs, constants, outputs
-
-
 def _parse_batch(record_batch,
                  insize=(20, 20, 9),
                  consize=(200, 200, 2),
@@ -87,12 +75,9 @@ def _parse_batch(record_batch,
 
     # Parse the input `tf.Example` proto using the dictionary above
     example = tf.io.parse_example(record_batch, feature_description)
-    if return_dic:
-        return ({'lo_res_inputs': example['generator_input'],
-                 'hi_res_inputs': example['constants']},
-                {'output': example['generator_output']})
-    else:
-        return example['generator_input'], example['constants'], example['generator_output']
+    return ({'lo_res_inputs': example['generator_input'],
+             'hi_res_inputs': example['constants']},
+            {'output': example['generator_output']})
 
 
 def create_dataset(year,
@@ -152,10 +137,8 @@ def create_fixed_dataset(year=None,
                                        consize=con_shape,
                                        outsize=out_shape))
     ds = ds.batch(batch_size)
-    if autocoarsen and return_dic:
+    if autocoarsen:
         ds = ds.map(_dataset_autocoarsener)
-    elif autocoarsen and not return_dic:
-        ds = ds.map(_dataset_autocoarsener_list)
     return ds
 
 
@@ -234,7 +217,6 @@ def write_data(year,
 # currently unused; was previously used to make small-image validation dataset,
 # but this is now obsolete
 def save_dataset(tfrecords_dataset, flename, max_batches=None):
-    assert return_dic, "Only works with return_dic=True"
     flename = os.path.join(records_folder, flename)
     fle_hdle = tf.io.TFRecordWriter(flename)
     for ii, sample in enumerate(tfrecords_dataset):

@@ -55,6 +55,7 @@ def setup_inputs(*,
 
 
 def _init_VAEGAN(gen, data_gen, load_full_image, batch_size, latent_variables):
+    # load_full_image is actually a proxy for "dict or not?" -- TODO fix
     if False:
         # this runs the model on one batch, which is what the internet says
         # but this doesn't actually seem to be necessary?!

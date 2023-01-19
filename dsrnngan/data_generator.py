@@ -6,8 +6,6 @@ from tensorflow.keras.utils import Sequence
 from data import load_fcst_radar_batch, load_hires_constants, fcst_hours
 import read_config
 
-return_dic = True
-
 
 class DataGenerator(Sequence):
     def __init__(self, dates, fcst_fields, batch_size, log_precip=True,
@@ -83,17 +81,11 @@ class DataGenerator(Sequence):
             data_x_batch = self._dataset_autocoarsener(data_y_batch[..., np.newaxis])
 
         if self.constants is None:
-            if return_dic:
-                return {"lo_res_inputs": data_x_batch}, {"output": data_y_batch}
-            else:
-                return data_x_batch, data_y_batch
+            return {"lo_res_inputs": data_x_batch}, {"output": data_y_batch}
         else:
-            if return_dic:
-                return {"lo_res_inputs": data_x_batch,
-                        "hi_res_inputs": self.constants},\
-                        {"output": data_y_batch}
-            else:
-                return data_x_batch, self.constants, data_y_batch
+            return {"lo_res_inputs": data_x_batch,
+                    "hi_res_inputs": self.constants},\
+                    {"output": data_y_batch}
 
     def shuffle_data(self):
         assert len(self.hours) == len(self.dates)
