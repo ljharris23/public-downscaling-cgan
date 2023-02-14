@@ -3,6 +3,7 @@ import os
 import warnings
 
 import numpy as np
+import numpy.ma as ma
 from properscoring import crps_ensemble
 from tensorflow.python.keras.utils import generic_utils
 
@@ -116,11 +117,14 @@ def eval_one_chkpt(*,
         cond = inputs['lo_res_inputs']
         const = inputs['hi_res_inputs']
         truth = outputs['output']
-        truth = np.expand_dims(np.array(truth), axis=-1)  # must be 4D tensor for pooling NHWC
-        if denormalise_data:
-            truth = data.denormalise(truth)
+        mask = outputs['mask']
 
-        # generate predictions, depending on model type
+        masked_truth = ma.array(truth, mask=mask)
+        masked_truth = np.expand_dims(masked_truth, axis=-1)  # must be 4D tensor for pooling NHWC
+        if denormalise_data:
+            masked_truth = data.denormalise(masked_truth)
+
+        # generate (unmasked) predictions, depending on model type
         samples_gen = []
         if mode == "GAN":
             noise_shape = np.array(cond)[0, ..., 0].shape + (noise_channels,)
@@ -151,8 +155,8 @@ def eval_one_chkpt(*,
                 sample_gen = data.denormalise(sample_gen)
 
             # Calculate MAE, MSE for this sample
-            mae = ((np.abs(truth - sample_gen)).mean(axis=(1, 2)))
-            mse = ((truth - sample_gen)**2).mean(axis=(1, 2))
+            mae = ((np.abs(masked_truth - sample_gen)).mean(axis=(1, 2)))
+            mse = ((masked_truth - sample_gen)**2).mean(axis=(1, 2))
 
             mae_all.append(mae.flatten())
             mse_all.append(mse.flatten())
@@ -167,26 +171,47 @@ def eval_one_chkpt(*,
 
         # Calculate Ensemble Mean MSE
         ensmean /= ensemble_size
-        emmse = ((truth - ensmean)**2).mean(axis=(1, 2))
+        emmse = ((masked_truth - ensmean)**2).mean(axis=(1, 2))
         emmse_all.append(emmse.flatten())
 
         # Do all RALSD at once, to avoid re-calculating power spectrum of truth image
-        ralsd = calculate_ralsd_rmse(np.squeeze(truth, axis=-1), samples_gen)
+        ralsd = calculate_ralsd_rmse(np.squeeze(masked_truth, axis=-1), samples_gen)
         ralsd_all.append(ralsd.flatten())
 
         # turn list of predictions into array, for CRPS/rank calculations
         samples_gen = np.stack(samples_gen, axis=-1)  # shape of samples_gen is [n, h, w, c] e.g. [1, 940, 940, 10]
 
         # calculate CRPS scores for different pooling methods
+        # crps_ensemble is robust to NaN representing missing values,
+        # so just fill the masked truth array with np.nan for simplicity
         for method in CRPS_pooling_methods:
             if method == 'no_pooling':
-                truth_pooled = truth
+                truth_pooled = masked_truth.filled(np.nan)
                 samples_gen_pooled = samples_gen
             else:
-                truth_pooled = pool(truth, method)
                 samples_gen_pooled = pool(samples_gen, method)
+                if masked_truth.mask is np.ma.nomask:
+                    # all data valid, so just pool the truth
+                    truth_pooled = pool(masked_truth.data, method)
+                else:
+                    # some data invalid, so do slightly convoluted pooling
+                    # of truth and mask...
+                    # the fill value doesn't matter, since we exclude these later
+                    truth_temp = pool(masked_truth.filled(0.0), method)
+                    # this is slightly magic; turns out that applying
+                    # max or average pooling to the mask does exactly the right thing
+                    # (relies on invalid = True [1.0], valid = False [0.0], so
+                    # that if any of the input elements are invalid, the output is
+                    # >0, so also invalid)
+                    mask_pooled = pool(masked_truth.mask, method)
+                    # now create a masked array
+                    masked_truth_temp = ma.array(truth_temp, mask=mask_pooled.astype(bool))
+                    # and fill invalid slots with NaN
+                    truth_pooled = masked_truth_temp.filled(np.nan)
+
             # crps_ensemble expects truth dims [N, H, W], pred dims [N, H, W, C]
-            crps_score = crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled).mean()
+            # this will have NaN whereever truth was NaN, so use np.nanmean
+            crps_score = np.nanmean(crps_ensemble(np.squeeze(truth_pooled, axis=-1), samples_gen_pooled))
             del truth_pooled, samples_gen_pooled
             gc.collect()
 
@@ -199,17 +224,29 @@ def eval_one_chkpt(*,
         # Add noise to truth and generated samples to make 0-handling fairer
         # NOTE truth and sample_gen are 'polluted' after this, hence we do this last
         if add_noise:
-            truth += rng.random(size=truth.shape, dtype=np.float32)*noise_factor
+            masked_truth += rng.random(size=masked_truth.shape, dtype=np.float32)*noise_factor
             samples_gen += rng.random(size=samples_gen.shape, dtype=np.float32)*noise_factor
 
-        truth_flat = truth.ravel()  # unwrap into one long array, then unwrap samples_gen in same format
-        samples_gen_ranks = samples_gen.reshape((-1, ensemble_size))  # unknown batch size/img dims, known number of samples
+        if masked_truth.mask is np.ma.nomask:
+            truth_flat = masked_truth.ravel()  # unwrap into one long array, then unwrap samples_gen in same format
+            samples_gen_ranks = samples_gen.reshape((-1, ensemble_size))  # unknown batch size/img dims, known number of samples
+        else:
+            truth_flat = masked_truth[~masked_truth.mask].ravel()  # pick out only valid elements
+            samples_gen_ranks = samples_gen[~np.squeeze(masked_truth.mask, axis=-1)]  # pick out corresponding predictions
+
         rank = np.count_nonzero(truth_flat[:, None] >= samples_gen_ranks, axis=-1)  # mask array where truth > samples gen, count
         ranks.append(rank)
+
         # keep track of input and truth rainfall values, to facilitate further ranks processing
         cond_exp = np.repeat(np.repeat(data.denormalise(cond[..., tpidx]).astype(np.float32), ds_fac, axis=-1), ds_fac, axis=-2)
-        lowress.append(cond_exp.ravel())
-        hiress.append(truth.astype(np.float32).ravel())
+
+        if masked_truth.mask is np.ma.nomask:
+            lowress.append(cond_exp.ravel())
+            hiress.append(masked_truth.astype(np.float32).ravel())
+        else:
+            lowress.append(cond_exp[~np.squeeze(masked_truth.mask, axis=-1)].ravel())
+            hiress.append(masked_truth[~masked_truth.mask].astype(np.float32).ravel())
+
         del samples_gen_ranks, truth_flat
         gc.collect()
 
@@ -348,8 +385,14 @@ def calculate_ralsd_rmse(truth, samples):
     # for images that are mostly zeroes
     if truth.mean() < 0.002:
         return np.array([np.nan])
+
     # calculate RAPSD of truth once, not repeatedly!
-    fft_freq_truth = rapsd(np.squeeze(truth, axis=0), fft_method=np.fft)
+    # truth may contain invalid (masked-out) data.
+    # replace this by the mean... (could instead replace by 0.
+    # neither is perfect, and both will affect the spectrum somewhat)
+    filled_truth = truth.filled(truth.mean())
+
+    fft_freq_truth = rapsd(np.squeeze(filled_truth, axis=0), fft_method=np.fft)
     dBtruth = 10 * np.log10(fft_freq_truth)
 
     ralsd_all = []
