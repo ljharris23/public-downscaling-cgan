@@ -6,6 +6,7 @@ import yaml
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.ma as ma
 # import matplotlib as mpl; mpl.use('svg')
 import seaborn as sns
 from matplotlib import colorbar, colors, gridspec
@@ -30,6 +31,7 @@ value_range_lsm = (0, 1.2)
 value_range_orog = (-0.05, 1)
 cmap = ListedColormap(sns.color_palette("YlGnBu", 256))
 cmap.set_under('white')
+cmap.set_bad('black')
 linewidth = 0.4
 extent = [-7.5, 2, 49.5, 59]  # (lon, lat)
 alpha = 0.8
@@ -169,8 +171,12 @@ for i in range(num_samples):
         input_conditions[..., -1] = inputs['lo_res_inputs'][..., -1]*fcst_norm['v700'][1] + fcst_norm['v700'][0]
     seq_cond.append(input_conditions)
 
+    truth = outputs['output']
+    mask = outputs['mask']
+    masked_truth = ma.array(truth, mask=mask)
+
     # make sure ground truth image has correct dimensions
-    sample = np.expand_dims(np.array(outputs['output']), axis=-1)
+    sample = np.expand_dims(masked_truth, axis=-1)
     seq_real.append(data.denormalise(sample))
 
     pred_ensemble = []
@@ -224,6 +230,14 @@ constant_1 = seq_const[0][0, ..., 1]  # lsm
 radar = seq_real[0][0, ..., 0]
 pred_0_0 = pred[0][0][0, ..., 0]  # [sample_images][pred_ensemble_size][NHWC]
 pred_mean = pred[0][:, 0, ..., 0].mean(axis=0)  # mean of ensemble members for img 0
+
+# bring precip plots away from 0, since colour scale is logarithmic, and 0 values
+# get confused with NaNs once the log is done
+fcst_total = np.maximum(fcst_total, 1e-6)
+fcst_conv = np.maximum(fcst_conv, 1e-6)
+radar = np.maximum(radar, 1e-6)
+pred_0_0 = np.maximum(pred_0_0, 1e-6)
+pred_mean = np.maximum(pred_mean, 1e-6)
 
 # colorbar
 cb = list(range(0, 6))
@@ -343,12 +357,12 @@ for i in range(pred_ensemble_size):
 sequences = []
 for i in range(num_samples):
     tmp = {}
-    tmp['TRUTH'] = seq_real[i][0, ..., 0]
-    tmp[plot_input_title] = seq_cond[i][0, ..., 0]
+    tmp['TRUTH'] = np.maximum(seq_real[i][0, ..., 0], 1e-6)
+    tmp[plot_input_title] = np.maximum(seq_cond[i][0, ..., 0], 1e-6)
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]
     for j in range(pred_ensemble_size):
-        tmp[f"{mode} pred {j+1}"] = pred[i][j][0, ..., 0]
+        tmp[f"{mode} pred {j+1}"] = np.maximum(pred[i][j][0, ..., 0], 1e-6)
     sequences.append(tmp)
 
 fname = "sequences-" + str(model_number) + "-" + str(num_samples) + ".pickle"
