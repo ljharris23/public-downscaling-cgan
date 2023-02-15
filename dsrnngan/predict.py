@@ -65,7 +65,6 @@ model_number = args.model_number
 predict_year = args.predict_year
 num_samples = args.num_samples
 pred_ensemble_size = args.pred_ensemble_size
-batch_size = args.batch_size
 
 config_path = os.path.join(log_folder, 'setup_params.yaml')
 with open(config_path, 'r') as f:
@@ -161,7 +160,7 @@ for i in range(num_samples):
     seq_const.append(inputs['hi_res_inputs'])
     input_conditions = inputs['lo_res_inputs'].copy()
 
-    #  denormalise precip inputs
+    # denormalise precip inputs
     input_conditions[..., 0:2] = data.denormalise(inputs['lo_res_inputs'][..., 0:2])
 
     if problem_type != 'autocoarsen':
