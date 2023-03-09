@@ -33,6 +33,7 @@ import os
 import pickle
 
 import numpy as np
+import numpy.ma as ma
 from scipy.ndimage.filters import uniform_filter
 
 import data
@@ -161,19 +162,30 @@ def plot_fss_curves(*,
             if model_number in model_numbers:
                 # GAN, not upscaling
                 inputs, outputs = next(data_pred_iter)
+                truth = outputs['output']
+                mask = outputs['mask']
+                # create masked array for denormalisation step
+                norm_masked_truth = ma.array(truth, mask=mask)
                 # need to denormalise
-                im_real = data.denormalise(outputs['output']).astype(np.single)  # shape: batch_size x H x W
+                denorm_masked_truth = data.denormalise(norm_masked_truth).astype(np.single)  # shape: batch_size x H x W
+                # fill in invalid data with 0s for FSS calculation; im_real is now a normal NumPy array
+                im_real = denorm_masked_truth.filled(0.0)
             else:
                 # upscaling, no need to denormalise
                 inputs, outputs = next(data_benchmarks_iter)
-                im_real = outputs['output'].astype(np.single)  # shape: batch_size x H x W
+                truth = outputs['output']
+                mask = outputs['mask']
+                masked_truth = ma.array(truth, mask=mask).astype(np.single)
+                im_real = masked_truth.filled(0.0)
 
             if model_number in model_numbers:
                 # get GAN predictions
                 pred_ensemble = []
                 if mode == 'det':
-                    pred_ensemble.append(data.denormalise(model.gen.predict([inputs['lo_res_inputs'],
-                                                                             inputs['hi_res_inputs']]))[..., 0])
+                    pred = data.denormalise(model.gen.predict([inputs['lo_res_inputs'],
+                                                               inputs['hi_res_inputs']]))[..., 0]
+                    pred[mask] = 0.0  # zero out entries where truth data was also zeroed out
+                    pred_ensemble.append(pred)
                 else:
                     if mode == 'GAN':
                         noise_shape = inputs['lo_res_inputs'][0, ..., 0].shape + (noise_channels,)
@@ -186,12 +198,14 @@ def plot_fss_curves(*,
                     for jj in range(ensemble_members):
                         inputs['noise_input'] = noise_gen()
                         if mode == 'GAN':
-                            pred_ensemble.append(data.denormalise(model.gen.predict([inputs['lo_res_inputs'],
-                                                                                     inputs['hi_res_inputs'],
-                                                                                     inputs['noise_input']]))[..., 0])
+                            pred = data.denormalise(model.gen.predict([inputs['lo_res_inputs'],
+                                                                       inputs['hi_res_inputs'],
+                                                                       inputs['noise_input']]))[..., 0]
                         elif mode == 'VAEGAN':
                             dec_inputs = [mean, logvar, inputs['noise_input'], inputs['hi_res_inputs']]
-                            pred_ensemble.append(data.denormalise(model.gen.decoder.predict(dec_inputs))[..., 0])
+                            pred = data.denormalise(model.gen.decoder.predict(dec_inputs))[..., 0]
+                        pred[mask] = 0.0  # zero out entries where truth data was also zeroed out
+                        pred_ensemble.append(pred)
 
                 # turn accumulated list into numpy array
                 pred_ensemble = np.stack(pred_ensemble, axis=1)  # shape: batch_size x ensemble_mem x H x W
@@ -201,8 +215,10 @@ def plot_fss_curves(*,
             else:
                 # pred_ensemble will be batch_size x ens x H x W
                 if model_number == "nn_interp":
-                    pred_ensemble = np.expand_dims(inputs['lo_res_inputs'][:, :, :, tpidx], 1)
-                    pred_ensemble = nn_interp_model(pred_ensemble, ds_fac)
+                    pred_ensemble = inputs['lo_res_inputs'][:, :, :, tpidx]  # batch_size x H x W
+                    pred_ensemble = nn_interp_model(pred_ensemble, ds_fac)  # batch_size x H x W
+                    pred_ensemble[mask] = 0.0
+                    pred_ensemble = np.expand_dims(pred_ensemble, 1)  # batch_size x ens size [1] x H x W
 
                 else:
                     raise RuntimeError('Unknown model_number {}' % model_number)

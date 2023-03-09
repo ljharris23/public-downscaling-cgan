@@ -3,6 +3,7 @@ import os
 import pickle
 
 import numpy as np
+import numpy.ma as ma
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
 import data
@@ -135,12 +136,18 @@ def calculate_roc(*,
             if model_number in model_numbers:
                 # GAN, not upscale
                 inputs, outputs = next(data_pred_iter)
+                truth = outputs['output']
+                mask = outputs['mask']
+                # create masked array for denormalisation step
+                norm_masked_truth = ma.array(truth, mask=mask)
                 # need to denormalise
-                im_real = data.denormalise(outputs['output']).astype(np.single)  # shape: batch_size x H x W
+                im_real = data.denormalise(norm_masked_truth).astype(np.single)  # shape: batch_size x H x W
             else:
                 # upscale, no need to denormalise
                 inputs, outputs = next(data_benchmarks_iter)
-                im_real = outputs['output'].astype(np.single)  # shape: batch_size x H x W
+                truth = outputs['output']
+                mask = outputs['mask']
+                im_real = ma.array(truth, mask=mask).astype(np.single)
 
             if model_number in model_numbers:
                 # get GAN predictions
@@ -188,10 +195,20 @@ def calculate_roc(*,
                     pred_ensemble_pooled = pred_ensemble.copy()
                 else:
                     # im_real only has 3 dims but the pooling needs 4,
-                    # so add a fake extra dim and squeeze back down
-                    im_real_pooled = np.expand_dims(im_real, axis=1)
-                    im_real_pooled = pool(im_real_pooled, method, data_format='channels_first')
+                    # so add a fake extra dim and squeeze back down afterwards
+                    im_real_temp = np.expand_dims(im_real, axis=1)
+
+                    if im_real.mask is np.ma.nomask:
+                        im_real_pooled = pool(im_real_temp, method, data_format='channels_first')
+                        im_real_pooled = ma.array(im_real_pooled)
+                    else:
+                        # some data invalid, so do pooling of truth and mask (as in eval.py; see explanation there)
+                        im_real_pooled = pool(im_real_temp.filled(0.0), method, data_format='channels_first')
+                        mask_pooled = pool(im_real_temp.mask, method, data_format='channels_first')
+                        im_real_pooled = ma.array(im_real_pooled, mask=mask_pooled.astype(bool))
+                    # squeeze out extra dim
                     im_real_pooled = np.squeeze(im_real_pooled, axis=1)
+
                     pred_ensemble_pooled = pool(pred_ensemble, method, data_format='channels_first')
 
                 for value in precip_values:
@@ -234,10 +251,17 @@ def calculate_roc(*,
             print("Computing ROC and prec-recall for", method)
             for value in precip_values:
                 # Compute ROC curve and ROC area for each precip value
-                fpr_pv, tpr_pv, _ = roc_curve(np.ravel(y_true[method][value]), np.ravel(y_score[method][value]), drop_intermediate=False)
-                gc.collect()
-                pre_pv, rec_pv, _ = precision_recall_curve(np.ravel(y_true[method][value]), np.ravel(y_score[method][value]))
-                gc.collect()
+                y_mask = y_true[method][value].mask
+                if y_mask is np.ma.nomask:
+                    fpr_pv, tpr_pv, _ = roc_curve(np.ravel(y_true[method][value]), np.ravel(y_score[method][value]), drop_intermediate=False)
+                    gc.collect()
+                    pre_pv, rec_pv, _ = precision_recall_curve(np.ravel(y_true[method][value]), np.ravel(y_score[method][value]))
+                    gc.collect()
+                else:
+                    fpr_pv, tpr_pv, _ = roc_curve(np.ravel(y_true[method][value][~y_mask]), np.ravel(y_score[method][value][~y_mask]), drop_intermediate=False)
+                    gc.collect()
+                    pre_pv, rec_pv, _ = precision_recall_curve(np.ravel(y_true[method][value][~y_mask]), np.ravel(y_score[method][value][~y_mask]))
+                    gc.collect()
                 # note: fpr_pv, tpr_pv, etc., are at most the size of the number of unique values of y_score.
                 # for us, this is just "fraction of ensemble members > threshold" which is relatively small,
                 # but if y_score took arbirary values, this could be really large (particularly with drop_intermediate=False)

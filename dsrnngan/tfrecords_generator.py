@@ -164,7 +164,7 @@ def write_data(year,
 
     # chosen to approximately cover the full image, but can be changed!
     nsamples = (img_size//img_chunk_width + 1)**2
-    print("Samples per image:", nsamples)
+    print("Samples per image:", nsamples)  # note, actual samples may be less than this if mask is used to exclude some
     import random
 
     for hour in hours:
@@ -183,11 +183,18 @@ def write_data(year,
         for batch in range(len(dates)):
             print(hour, batch)
             sample = dgc.__getitem__(batch)
-            for k in range(sample[1]['output'].shape[0]):
+            for k in range(sample[1]['output'].shape[0]):  # loop over batch, unnecessary if batch_size = 1
                 for ii in range(nsamples):
                     # e.g. for image width 94 and img_chunk_width 20, can have 0:20 up to 74:94
                     idx = random.randint(0, img_size-img_chunk_width)
                     idy = random.randint(0, img_size-img_chunk_width)
+
+                    mask = sample[1]['mask'][k,
+                                             idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
+                                             idy*scaling_factor:(idy+img_chunk_width)*scaling_factor].flatten()
+                    if np.any(mask):
+                        # some of the radar data is invalid, so don't use this subsample
+                        continue
 
                     radar = sample[1]['output'][k,
                                                 idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
