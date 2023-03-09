@@ -30,7 +30,7 @@ May also require cudatoolkit
 
 You should have two main datasets:
 1. Forecast data (low-resolution)
-2. Truth data, for example radar (high-resolution)
+2. Truth data, for example radar (high-resolution).  This may contain missing data.
 
 All images in each dataset should be the same size, and there should be a constant resolution scaling factor between them.  Enter this downscaling factor in `downscaling_factor.yaml`, along with a list of `steps` that multiply to the overall factor.  In the original paper, we use 10x, with steps of 5 and 2.  See `models.py` for exactly how these are used in the architecture.
 
@@ -54,7 +54,7 @@ Start by adjusting the paths in `data_paths.yaml` to point at your own datasets.
 
 Copy the provided `local_config-example.yaml` to `local_config.yaml` and set the options appropriately.  The file `read_config.py` controls what these options do, and you may wish to add more options of your own.
 
-The main file you will have to change is `data.py`.  The functions in there control how the forecast and "truth" (radar) data are loaded.  You will want to rewrite substantial parts of these functions, according to the data that you plan to use.  As written, these functions are centred around the radar data.  Essentially, for a particular date and time, the radar data for that time is loaded.  A corresponding forecast is found (the logic for this is in `load_fcst()`), and that data is loaded.  You may wish to flip this logic around to be more forecast-centric.
+The main file you will have to change is `data.py`.  The functions in there control how the forecast and "truth" (radar) data are loaded, along with the definition of the "invalid data" mask.  You will want to rewrite substantial parts of these functions, according to the data that you plan to use.  As written, these functions are centred around the radar data.  Essentially, for a particular date and time, the radar data for that time is loaded.  A corresponding forecast is found (the logic for this is in `load_fcst()`), and that data is loaded.  You may wish to flip this logic around to be more forecast-centric.
 
 A particular trap:
 - Beware the difference between instanteneous fields (use `field[hour]`) and accumulated fields (use `field[hour] - field[hour-1]`).  Naturally, beware of off-by-one errors, etc., too.
@@ -63,7 +63,7 @@ These functions are ultimately called by the `DataGenerator` class in `data_gene
 
 At this point, you may wish to visualise the data returned by the `DataGenerator` to check that it matches what you expect!
 
-You will want to manually run the function `gen_fcst_norm` in `data.py`.  This gives certain field statistics (mean, standard dev., max, etc.) that are used for normalising inputs to the neural networks during training.  The NN performance should not be sensitive to the exact values of these, so it will be fine to run for just 1 year (among the training data years)
+You will want to manually run the function `gen_fcst_norm` in `data.py`, either from a Python 'notebook', or by writing a small wrapper script.  This function saves certain field statistics (mean, standard dev., max, etc.) that are used for normalising inputs to the neural networks during training.  The NN performance should not be sensitive to the exact values of these, so it will be fine to run for just 1 year (among the training data years)
 
 Next, you will want to manually run the function `write_data` in `tfrecords_generator.py` for each year of training data.  This generates training data by subsampling the full-size images.  This function has various hard-coded constants, including the low-resolution image size (assumed square!  do edit the code if this is not true...), the size of the subsampled images, and the number of samples taken from each full image.  Make sure you adjust these to your own purpose.
 
@@ -99,7 +99,7 @@ Two things to note:
 have been working with. If this changes, you may want to update
 them accordingly.
 - Calculating everything, for all model iterations, will take a long 
-time. Possibly weeks. You have been warned. 
+time. Possibly weeks. You have been warned.
 
 As an example, to train a model and evaluate the last few model
 checkpoints, you could run:
@@ -145,6 +145,8 @@ use the scripts
 You'll have to open them and hardcode file paths and model numbers at the
 top. I also made a plot_comparisons.py at one point but I've deleted it so
 now you have to use predict.py. Sorry.
+
+If some of the radar data is invalid, and therefore masked out, the diagnostics take this into account. Pointwise metrics such as MAE and RMSE will not include pixels where the radar data doesn't exist. When metrics are calculated on spatially-pooled fields, pixels are treated as invalid whenever any input pixels are invalid. The fractions skill score is treated differently: any invalid pixels are set to zero precipitation in the truth, and the corresponding pixels are set to zero in the GAN ensemble forecasts. This is for simplicity, since we treat the FSS code as a third-party library routine.
 
 5. If you want to change model architectures, add them to the `models.py` and `setupmodel.py` files. You can then use the `config.yaml` file to call a different model architecture. We suggest that small tweaks to the existing architecture continue to use `models.generator`/`models.discriminator`, but with a new "architecture name" `arch`, and the changes are made conditional on the architecture name. For completely different architectures, write an entirely new architecture function such as `generator2`, and use this in the `setupmodel.py` dictionaries.
 
