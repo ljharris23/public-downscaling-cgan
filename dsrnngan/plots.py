@@ -28,7 +28,7 @@ def plot_img(img, value_range=(np.log10(0.1), np.log10(100)), extent=None):
 
 
 def plot_img_log(img, value_range=(0.01, 5), extent=None):
-    plt.imshow(img,
+    plt.imshow(np.maximum(img, 1e-6),
                interpolation='nearest',
                norm=colors.LogNorm(*value_range),
                origin='lower',
@@ -38,7 +38,7 @@ def plot_img_log(img, value_range=(0.01, 5), extent=None):
 
 
 def plot_img_log_coastlines(img, value_range_precip=(0.01, 5), cmap='viridis', extent=None, alpha=0.8):
-    plt.imshow(img,
+    plt.imshow(np.maximum(img, 1e-6),
                interpolation='nearest',
                norm=colors.LogNorm(*value_range_precip),
                cmap=cmap,
@@ -487,6 +487,7 @@ def plot_preds(pred_files,
     linewidth = 0.4
     cmap = ListedColormap(sns.color_palette(palette, 256))
     cmap.set_under('white')
+    cmap.set_bad('black')
     extent = [-7.5, 2, 49.5, 59]  # (lon, lat)
     alpha = 0.8
     spacing = 10
@@ -557,6 +558,7 @@ def plot_comparison(files,
     linewidth = 0.4
     cmap = ListedColormap(sns.color_palette(palette, 256))
     cmap.set_under('white')
+    cmap.set_bad('black')
     extent = [-7.5, 2, 49.5, 59]  # (lon, lat)
     alpha = 0.8
     spacing = 10
@@ -583,6 +585,8 @@ def plot_comparison(files,
                 title = pred_data['4x'][k]['dates'][:4] + '-' + pred_data['4x'][k]['dates'][4:6] + '-' + pred_data['4x'][k]['dates'][6:8] + ' ' + str(pred_data['4x'][k]['hours']) + 'Z'
                 plt.title(title, fontsize=9)
             if i == 1:  # plot TRUTH
+                # todo: make sure truth image is a masked array
+                # (handle this elsewhere - notebook or generation code?)
                 plot_img_log_coastlines(pred_data['4x'][k]['TRUTH'],
                                         value_range_precip=value_range_precip,
                                         cmap=cmap,
