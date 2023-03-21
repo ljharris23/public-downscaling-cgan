@@ -78,7 +78,9 @@ class DataGenerator(Sequence):
             norm=self.fcst_norm)
         if self.autocoarsen:
             # replace forecast data by coarsened radar data!
-            data_x_batch = self._dataset_autocoarsener(data_y_batch[..., np.newaxis])
+            radar_temp = data_y_batch.copy()
+            radar_temp[data_mask_batch] = 0.0
+            data_x_batch = self._dataset_autocoarsener(radar_temp[..., np.newaxis])
 
         if self.constants is None:
             return {"lo_res_inputs": data_x_batch},\
