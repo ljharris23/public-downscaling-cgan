@@ -155,6 +155,11 @@ def eval_one_chkpt(*,
                 sample_gen = data.denormalise(sample_gen)
 
             # Calculate MAE, MSE for this sample
+            # note: we explicitly only take the mean over the image dimensions,
+            # so the result is a 2D [masked] array. as a happy accident,
+            # if an entire image is masked out, we still calculate the overall
+            # MAE, MSE and EM-RMSE correctly, since we concatentate together
+            # masked array objects and take the mean.
             mae = ((np.abs(masked_truth - sample_gen)).mean(axis=(1, 2)))
             mse = ((masked_truth - sample_gen)**2).mean(axis=(1, 2))
 
@@ -217,7 +222,10 @@ def eval_one_chkpt(*,
 
             if method not in crps_scores:
                 crps_scores[method] = []
-            crps_scores[method].append(crps_score)
+
+            # if entire image is masked out, crps_score will be NaN. exclude this.
+            if not np.isnan(crps_score):
+                crps_scores[method].append(crps_score)
 
         # calculate ranks; only calculated without pooling
 
@@ -251,9 +259,9 @@ def eval_one_chkpt(*,
         gc.collect()
 
         if show_progress:
-            emmse_so_far = np.sqrt(np.mean(np.concatenate(emmse_all)))
+            emrmse_so_far = np.sqrt(np.mean(np.concatenate(emmse_all)))
             crps_mean = np.mean(crps_scores['no_pooling'])
-            losses = [("EM-MSE", emmse_so_far), ("CRPS", crps_mean)]
+            losses = [("EM-RMSE", emrmse_so_far), ("CRPS", crps_mean)]
             progbar.add(1, values=losses)
 
     mae_all = np.concatenate(mae_all)
