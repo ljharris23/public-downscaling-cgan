@@ -82,7 +82,7 @@ def load_hires_constants(batch_size=1):
 
 
 def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=False,
-                          constants=False, hour=0, norm=False):
+                          hour=0, norm=False):
     batch_x = []  # forecast
     batch_y = []  # radar
     batch_mask = []  # mask
@@ -104,10 +104,7 @@ def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=F
         batch_y.append(radar)
         batch_mask.append(mask)
 
-    if (not constants):
-        return np.array(batch_x), np.array(batch_y), np.array(batch_mask)
-    else:
-        return [np.array(batch_x), load_hires_constants(len(batch_dates))], np.array(batch_y), np.array(batch_mask)
+    return np.array(batch_x), np.array(batch_y), np.array(batch_mask)
 
 
 def load_fcst(ifield, date, hour, log_precip=False, norm=False):
