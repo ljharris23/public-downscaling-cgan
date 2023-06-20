@@ -16,7 +16,6 @@ def generator(mode,
               constant_fields=2,
               conv_size=(3, 3),
               padding=None,
-              stride=1,
               relu_alpha=0.2,
               norm=None):
 
@@ -46,7 +45,7 @@ def generator(mode,
 
     # Pass through 3 residual blocks
     for ii in range(3):
-        generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+        generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
     print('End of first residual block')
     print(f"Shape after first residual block: {generator_output.shape}")
 
@@ -68,7 +67,7 @@ def generator(mode,
     if arch == "forceconv-long":
         # Pass through 3 more residual blocks
         for ii in range(3):
-            generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+            generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
         print('End of extra low-res residual blocks')
         print(f"Shape after extra low-res residual blocks: {generator_output.shape}")
 
@@ -78,7 +77,7 @@ def generator(mode,
     for ii, step in enumerate(downscaling_steps):
         generator_output = UpSampling2D(size=(step, step), interpolation='bilinear')(generator_output)
         print(f"Shape after upsampling step {ii+1}: {generator_output.shape}")
-        generator_output = residual_block(generator_output, filters=block_channels[ii], conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+        generator_output = residual_block(generator_output, filters=block_channels[ii], conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
         print(f"Shape after residual block: {generator_output.shape}")
 
     # Concatenate with original size constants field
@@ -87,7 +86,7 @@ def generator(mode,
 
     # Pass through 3 residual blocks
     for ii in range(3):
-        generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+        generator_output = residual_block(generator_output, filters=filters_gen, conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
     print(f"Shape after third residual block: {generator_output.shape}")
 
     # Output layer
@@ -145,11 +144,11 @@ def discriminator(arch,
     block_channels = [filters_disc]*(len(downscaling_steps)-1) + [2*filters_disc]
 
     for ii, step in enumerate(downscaling_steps):
-        lo_res_input = residual_block(lo_res_input, filters=block_channels[ii], conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+        lo_res_input = residual_block(lo_res_input, filters=block_channels[ii], conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
         print(f"Shape of lo-res input after residual block: {lo_res_input.shape}")
         hi_res_input = Conv2D(filters=block_channels[ii], kernel_size=(step, step), strides=step, padding="valid", activation="relu")(hi_res_input)
         print(f"Shape of hi_res_input after upsampling step {ii+1}: {hi_res_input.shape}")
-        hi_res_input = residual_block(hi_res_input, filters=block_channels[ii], conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+        hi_res_input = residual_block(hi_res_input, filters=block_channels[ii], conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
         print(f"Shape of hi-res input after residual block: {hi_res_input.shape}")
 
     # concatenate hi- and lo-res inputs channel-wise before passing through discriminator
@@ -157,8 +156,8 @@ def discriminator(arch,
     print(f"Shape after concatenating lo-res input and hi-res input: {disc_input.shape}")
 
     # encode in residual blocks
-    disc_input = residual_block(disc_input, filters=filters_disc, conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
-    disc_input = residual_block(disc_input, filters=filters_disc, conv_size=conv_size, stride=stride, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+    disc_input = residual_block(disc_input, filters=filters_disc, conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
+    disc_input = residual_block(disc_input, filters=filters_disc, conv_size=conv_size, stride=1, relu_alpha=relu_alpha, norm=norm, padding=padding, force_1d_conv=forceconv)
     print(f"Shape after residual block: {disc_input.shape}")
     print('End of second residual block')
 
