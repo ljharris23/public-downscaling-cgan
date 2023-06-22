@@ -150,7 +150,7 @@ if __name__ == "__main__":
         if args.restart:  # load weights and run status
 
             model.load(model.filenames_from_root(model_weights_root))
-            with open(log_folder + "-run_status.json", 'r') as f:
+            with open(os.path.join(log_folder, "run_status.json"), 'r') as f:
                 run_status = json.load(f)
             training_samples = run_status["training_samples"]
             checkpoint = int(training_samples / (steps_per_checkpoint * batch_size)) + 1
