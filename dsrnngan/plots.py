@@ -110,10 +110,22 @@ def plot_sequences(gen,
         cond = data.denormalise(cond)
         seq_gen = [data.denormalise(seq) for seq in seq_gen]
 
+        # plot truth
         plt.subplot(gs[kk, 0])
         plot_img(seq_real[0, :, :], value_range=value_range)
+
+        # plot network input precip field
         plt.subplot(gs[kk, 1])
-        plot_img(cond[0, :, :, 0], value_range=value_range)
+        # hacky - don't know if we're in autocoarsen mode at this point.
+        # if cond (network input) has more than one channel, look for 'tp',
+        # else just plot the data we have (e.g., coarsened truth)
+        if cond.shape[-1] > 1:
+            tpidx = data.all_fcst_fields.index('tp')
+        else:
+            tpidx = 0
+        plot_img(cond[0, :, :, tpidx], value_range=value_range)
+
+        # plot generated samples
         for ll in range(ens_size):
             plt.subplot(gs[kk, ll+2])
             plot_img(seq_gen[ll][0, :, :, 0], value_range=value_range)
