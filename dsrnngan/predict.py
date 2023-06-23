@@ -132,15 +132,21 @@ if mode == "VAEGAN":
     _init_VAEGAN(gen, data_predict, batch_size, latent_variables)
 gen.load_weights(weights_fn)
 
-# dataset for benchmarks
-data_benchmarks = DataGeneratorFull(dates=dates,
-                                    fcst_fields=data.all_fcst_fields,
-                                    batch_size=batch_size,
-                                    log_precip=False,
-                                    shuffle=True,
-                                    hour='random',
-                                    fcst_norm=False,
-                                    autocoarsen=autocoarsen)
+# dataset for benchmarks - not currently used
+# data_benchmarks = DataGeneratorFull(dates=dates,
+#                                     fcst_fields=data.all_fcst_fields,
+#                                     batch_size=batch_size,
+#                                     log_precip=False,
+#                                     shuffle=True,
+#                                     hour='random',
+#                                     fcst_norm=False,
+#                                     autocoarsen=autocoarsen)
+
+if problem_type != 'autocoarsen':
+    tpidx = all_fcst_fields.index('tp')
+    cpidx = all_fcst_fields.index('cp')
+    uidx = all_fcst_fields.index('u700')
+    vidx = all_fcst_fields.index('v700')
 
 pred = []
 seq_real = []
@@ -162,13 +168,16 @@ for i in range(num_samples):
     seq_const.append(inputs['hi_res_inputs'])
     input_conditions = inputs['lo_res_inputs'].copy()
 
-    # denormalise precip inputs
-    input_conditions[..., 0:2] = data.denormalise(inputs['lo_res_inputs'][..., 0:2])
-
     if problem_type != 'autocoarsen':
+        # denormalise precip inputs for plotting
+        input_conditions[..., tpidx] = data.denormalise(inputs['lo_res_inputs'][..., tpidx])
+        input_conditions[..., cpidx] = data.denormalise(inputs['lo_res_inputs'][..., cpidx])
         #  denormalise wind inputs
-        input_conditions[..., -2] = inputs['lo_res_inputs'][..., -2]*fcst_norm['u700'][1] + fcst_norm['u700'][0]
-        input_conditions[..., -1] = inputs['lo_res_inputs'][..., -1]*fcst_norm['v700'][1] + fcst_norm['v700'][0]
+        input_conditions[..., uidx] = inputs['lo_res_inputs'][..., uidx]*fcst_norm['u700'][1] + fcst_norm['u700'][0]
+        input_conditions[..., vidx] = inputs['lo_res_inputs'][..., vidx]*fcst_norm['v700'][1] + fcst_norm['v700'][0]
+    else:
+        # assuming one channel only
+        input_conditions[..., 0] = data.denormalise(inputs['lo_res_inputs'][..., 0])
     seq_cond.append(input_conditions)
 
     truth = outputs['output']
@@ -179,6 +188,8 @@ for i in range(num_samples):
     sample = np.expand_dims(masked_truth, axis=-1)
     seq_real.append(data.denormalise(sample))
 
+    print(f"sample number {i+1}")
+    print(f"max truth value is {np.max(seq_real[-1])}")
     pred_ensemble = []
     if mode == 'det':  # this is plotting det as a model
         pred_ensemble_size = 1  # can't generate an ensemble with deterministic method
@@ -200,31 +211,29 @@ for i in range(num_samples):
             if mode == 'GAN':
                 gan_inputs = [inputs['lo_res_inputs'], inputs['hi_res_inputs'], inputs['noise_input']]
                 pred_ensemble.append(data.denormalise(gen.predict(gan_inputs)))
-                print(f"sample number {i+1}")
-                print(f"max predicted value is {np.amax(data.denormalise(gen.predict(gan_inputs)))}")
             elif mode == 'VAEGAN':
                 dec_inputs = [mean, logvar, inputs['noise_input'], inputs['hi_res_inputs']]
                 pred_ensemble.append(data.denormalise(gen.decoder.predict(dec_inputs)))
+            print(f"max predicted value is {np.max(pred_ensemble[-1])}")
         pred_ensemble = np.array(pred_ensemble)
         pred.append(pred_ensemble)
 
-data_benchmarks_iter = iter(data_benchmarks)
-for i in range(num_samples):
-    inp, outp = next(data_benchmarks_iter)
+# not used, but could also generate comparison plots of benchmark approaches
+# data_benchmarks_iter = iter(data_benchmarks)
+# for i in range(num_samples):
+#     inp, outp = next(data_benchmarks_iter)
 
 # plot input conditions and prediction example
 # len(seq) = num_predictions (iterations through data generator)
 # seq[0].shape = [NHWC], C=9 for cond, C=2 for const, C=1 for real, pred
 # list entry[0] - sample image 0
-tpidx = all_fcst_fields.index('tp')
-fcst_total = seq_cond[0][0, ..., tpidx]  # total precip
 if problem_type != 'autocoarsen':
-    cpidx = all_fcst_fields.index('cp')
-    uidx = all_fcst_fields.index('u700')
-    vidx = all_fcst_fields.index('v700')
+    fcst_total = seq_cond[0][0, ..., tpidx]  # total precip
     fcst_conv = seq_cond[0][0, ..., cpidx]  # convective precip
     fcst_u700 = seq_cond[0][0, ..., uidx]  # u700
     fcst_v700 = seq_cond[0][0, ..., vidx]  # v700
+else:
+    fcst_total = seq_cond[0][0, ..., 0]
 constant_0 = seq_const[0][0, ..., 0]  # orog
 constant_1 = seq_const[0][0, ..., 1]  # lsm
 radar = seq_real[0][0, ..., 0]
@@ -358,7 +367,10 @@ sequences = []
 for i in range(num_samples):
     tmp = {}
     tmp['TRUTH'] = np.maximum(seq_real[i][0, ..., 0], 1e-6)
-    tmp[plot_input_title] = np.maximum(seq_cond[i][0, ..., 0], 1e-6)
+    if problem_type != "autocoarsen":
+        tmp[plot_input_title] = np.maximum(seq_cond[i][0, ..., tpidx], 1e-6)
+    else:
+        tmp[plot_input_title] = np.maximum(seq_cond[i][0, ..., 0], 1e-6)
     tmp['dates'] = dates_save[i]
     tmp['hours'] = hours_save[i]
     for j in range(pred_ensemble_size):
