@@ -9,7 +9,7 @@ import read_config
 
 
 data_paths = read_config.get_data_paths()
-RADAR_PATH = data_paths["GENERAL"]["RADAR_PATH"]
+TRUTH_PATH = data_paths["GENERAL"]["TRUTH_PATH"]
 FCST_PATH = data_paths["GENERAL"]["FORECAST_PATH"]
 CONSTANTS_PATH = data_paths["GENERAL"]["CONSTANTS_PATH"]
 
@@ -26,10 +26,10 @@ def denormalise(x):
 
 def get_dates(year):
     """
-    Return dates where we have radar data
+    Return dates where we have truth data
     """
     from glob import glob
-    file_paths = os.path.join(RADAR_PATH, str(year), "*.nc")
+    file_paths = os.path.join(TRUTH_PATH, str(year), "*.nc")
     files = glob(file_paths)
     dates = []
     for f in files:
@@ -37,9 +37,9 @@ def get_dates(year):
     return sorted(dates)
 
 
-def load_radar_and_mask(date, hour, log_precip=False, aggregate=1):
+def load_truth_and_mask(date, hour, log_precip=False, aggregate=1):
     year = date[:4]
-    data_path = os.path.join(RADAR_PATH, year, f"metoffice-c-band-rain-radar_uk_{date}.nc")
+    data_path = os.path.join(TRUTH_PATH, year, f"metoffice-c-band-rain-radar_uk_{date}.nc")
     data = xr.open_dataset(data_path)
     assert hour+aggregate < 25
     y = np.array(data['unknown'][hour:hour+aggregate, :, :]).sum(axis=0)
@@ -47,7 +47,7 @@ def load_radar_and_mask(date, hour, log_precip=False, aggregate=1):
     # The remapping of the NIMROD radar left a few negative numbers, so remove those
     y[y < 0.0] = 0.0
 
-    # mask: False for valid radar data, True for invalid radar data
+    # mask: False for valid truth data, True for invalid truth data
     # (compatible with the NumPy masked array functionality)
     # if all data is valid:
     mask = np.full(y.shape, False, dtype=bool)
@@ -81,10 +81,10 @@ def load_hires_constants(batch_size=1):
     return np.repeat(np.stack([z, lsm], -1), batch_size, axis=0)
 
 
-def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=False,
+def load_fcst_truth_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=False,
                           hour=0, norm=False):
     batch_x = []  # forecast
-    batch_y = []  # radar
+    batch_y = []  # truth
     batch_mask = []  # mask
 
     if type(hour) == str:
@@ -100,8 +100,8 @@ def load_fcst_radar_batch(batch_dates, fcst_fields=all_fcst_fields, log_precip=F
     for i, date in enumerate(batch_dates):
         h = hours[i]
         batch_x.append(load_fcst_stack(fcst_fields, date, h, log_precip=log_precip, norm=norm))
-        radar, mask = load_radar_and_mask(date, h, log_precip=log_precip)
-        batch_y.append(radar)
+        truth, mask = load_truth_and_mask(date, h, log_precip=log_precip)
+        batch_y.append(truth)
         batch_mask.append(mask)
 
     return np.array(batch_x), np.array(batch_y), np.array(batch_mask)

@@ -1,6 +1,6 @@
 LOCATION1:
     GENERAL:
-        RADAR_PATH: '/path/to/radar/data'
+        TRUTH_PATH: '/path/to/truth/data'
         FORECAST_PATH: '/path/to/forecast/data'
         CONSTANTS_PATH: '/path/to/constants/data'
 
@@ -10,7 +10,7 @@ LOCATION1:
 
 LOCATION2:
     GENERAL:
-        RADAR_PATH: '/another/path/to/radar/data'
+        TRUTH_PATH: '/another/path/to/truth/data'
         FORECAST_PATH: '/another/path/to/forecast/data'
         CONSTANTS_PATH: '/another/path/to/constants/data'
 

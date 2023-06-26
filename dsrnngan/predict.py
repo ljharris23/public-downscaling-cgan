@@ -236,7 +236,7 @@ else:
     fcst_total = seq_cond[0][0, ..., 0]
 constant_0 = seq_const[0][0, ..., 0]  # orog
 constant_1 = seq_const[0][0, ..., 1]  # lsm
-radar = seq_real[0][0, ..., 0]
+truth = seq_real[0][0, ..., 0]
 pred_0_0 = pred[0][0][0, ..., 0]  # [sample_images][pred_ensemble_size][NHWC]
 pred_mean = pred[0][:, 0, ..., 0].mean(axis=0)  # mean of ensemble members for img 0
 
@@ -244,7 +244,7 @@ pred_mean = pred[0][:, 0, ..., 0].mean(axis=0)  # mean of ensemble members for i
 # get confused with NaNs once the log is done
 fcst_total = np.maximum(fcst_total, 1e-6)
 fcst_conv = np.maximum(fcst_conv, 1e-6)
-radar = np.maximum(radar, 1e-6)
+truth = np.maximum(truth, 1e-6)
 pred_0_0 = np.maximum(pred_0_0, 1e-6)
 pred_mean = np.maximum(pred_mean, 1e-6)
 
@@ -302,11 +302,11 @@ cb[0] = plt.colorbar(OROG, ax=ax[2],
                      orientation='horizontal',
                      fraction=0.04, pad=0.04)
 
-TRUTH = ax[3].imshow(radar,
+TRUTH = ax[3].imshow(truth,
                      norm=colors.LogNorm(*value_range_precip),
                      cmap=cmap, origin='lower', extent=extent,
                      transform=ccrs.PlateCarree(), alpha=alpha)
-ax[3].set_title('Radar (ground truth)')
+ax[3].set_title('Ground truth')
 ax[3].coastlines(resolution='10m', color='black', linewidth=linewidth)
 cb[3] = plt.colorbar(TRUTH, ax=ax[3],
                      norm=colors.LogNorm(*value_range_precip),

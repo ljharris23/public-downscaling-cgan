@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import Sequence
 
-from data import load_fcst_radar_batch, load_hires_constants, fcst_hours
+from data import load_fcst_truth_batch, load_hires_constants, fcst_hours
 import read_config
 
 
@@ -58,9 +58,9 @@ class DataGenerator(Sequence):
         # Number of batches in dataset
         return len(self.dates) // self.batch_size
 
-    def _dataset_autocoarsener(self, radar):
+    def _dataset_autocoarsener(self, truth):
         kernel_tf = tf.constant(1.0/(self.ds_factor*self.ds_factor), shape=(self.ds_factor, self.ds_factor, 1, 1), dtype=tf.float32)
-        image = tf.nn.conv2d(radar, filters=kernel_tf, strides=[1, self.ds_factor, self.ds_factor, 1], padding='VALID',
+        image = tf.nn.conv2d(truth, filters=kernel_tf, strides=[1, self.ds_factor, self.ds_factor, 1], padding='VALID',
                              name='conv_debug', data_format='NHWC')
         return image
 
@@ -70,17 +70,17 @@ class DataGenerator(Sequence):
         hours_batch = self.hours[idx*self.batch_size:(idx+1)*self.batch_size]
 
         # Load and return this batch of images
-        data_x_batch, data_y_batch, data_mask_batch = load_fcst_radar_batch(
+        data_x_batch, data_y_batch, data_mask_batch = load_fcst_truth_batch(
             dates_batch,
             fcst_fields=self.fcst_fields,
             log_precip=self.log_precip,
             hour=hours_batch,
             norm=self.fcst_norm)
         if self.autocoarsen:
-            # replace forecast data by coarsened radar data!
-            radar_temp = data_y_batch.copy()
-            radar_temp[data_mask_batch] = 0.0
-            data_x_batch = self._dataset_autocoarsener(radar_temp[..., np.newaxis])
+            # replace forecast data by coarsened truth data!
+            truth_temp = data_y_batch.copy()
+            truth_temp[data_mask_batch] = 0.0
+            data_x_batch = self._dataset_autocoarsener(truth_temp[..., np.newaxis])
 
         if self.constants is None:
             return {"lo_res_inputs": data_x_batch},\

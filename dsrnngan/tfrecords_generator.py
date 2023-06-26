@@ -193,10 +193,10 @@ def write_data(year,
                                              idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
                                              idy*scaling_factor:(idy+img_chunk_width)*scaling_factor].flatten()
                     if np.any(mask):
-                        # some of the radar data is invalid, so don't use this subsample
+                        # some of the truth data is invalid, so don't use this subsample
                         continue
 
-                    radar = sample[1]['output'][k,
+                    truth = sample[1]['output'][k,
                                                 idx*scaling_factor:(idx+img_chunk_width)*scaling_factor,
                                                 idy*scaling_factor:(idy+img_chunk_width)*scaling_factor].flatten()
                     const = sample[0]['hi_res_inputs'][k,
@@ -210,7 +210,7 @@ def write_data(year,
                     feature = {
                         'generator_input': _float_feature(forecast),
                         'constants': _float_feature(const),
-                        'generator_output': _float_feature(radar)
+                        'generator_output': _float_feature(truth)
                     }
                     features = tf.train.Features(feature=feature)
                     example = tf.train.Example(features=features)
@@ -221,7 +221,7 @@ def write_data(year,
                     # [specifically, log10(1 + rainfall) > 0.1]
                     # and bins into one of 4 classes: 0-25%, 25-50%, 50-75%, 75-100%
                     # feel free to replace with a different binning strategy!
-                    clss = min(int(np.floor(((radar > 0.1).mean()*num_class))), num_class-1)
+                    clss = min(int(np.floor(((truth > 0.1).mean()*num_class))), num_class-1)
 
                     fle_hdles[clss].write(example_to_string)
         for fh in fle_hdles:
