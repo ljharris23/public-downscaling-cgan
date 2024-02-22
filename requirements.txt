@@ -1,5 +1,5 @@
 numpy
-numba1
+numba
 matplotlib
 seaborn
 cartopy
