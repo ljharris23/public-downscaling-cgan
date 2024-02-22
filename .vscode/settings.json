@@ -1,0 +1,39 @@
+{
+    // Editor settings
+    "editor.formatOnSave": true,
+    "editor.renderWhitespace": "boundary",
+    "editor.rulers": [
+        100
+    ],
+    "workbench.editor.enablePreview": false,
+    "editor.insertSpaces": true,
+    // Files settings
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    // YAML settings
+    "[yaml]": {
+        "editor.tabSize": 2 //
+    },
+    // JSON settings
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features", // built-in JSON formatter
+    },
+    // Code actions on save
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    // Python settings
+    "black-formatter.args": [
+        "--line-length",
+        "150"
+    ],
+    "python.analysis.completeFunctionParens": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true
+    },
+    // Git settings
+    "git.autofetch": true,
+}
