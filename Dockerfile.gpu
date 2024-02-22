@@ -1,0 +1,31 @@
+FROM tensorflow/tensorflow:2.13.0-gpu
+
+ARG PIP_EXTRA_INDEX_URL
+
+RUN rm /etc/apt/sources.list.d/cuda.list
+
+RUN apt-get update
+RUN apt-get install -y git
+
+RUN pip install --upgrade pip
+
+WORKDIR /app
+
+COPY ./setup.py /app
+
+# Install requirements
+COPY ./requirements.txt /app
+RUN pip install -r /app/requirements.txt
+
+COPY ./requirements-test.txt /app
+RUN pip install -r /app/requirements-test.txt
+
+# Hack to get around tensorflow-io issue - https://github.com/tensorflow/io/issues/1755
+RUN pip install tensorflow-io
+RUN pip uninstall -y tensorflow-io
+
+# Copy the code and other relevent folders
+COPY /code /app/code
+COPY /.vscode /app/.vscode
+
+ENV PYTHONPATH="${PYTHONPATH}:/app"
