@@ -11,7 +11,7 @@ RUN pip install --upgrade pip
 
 WORKDIR /app
 
-COPY ./setup.py /app
+# COPY ./setup.py /app
 
 # Install requirements
 COPY ./requirements.txt /app
