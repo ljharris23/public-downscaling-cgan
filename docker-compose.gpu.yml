@@ -11,8 +11,8 @@ services:
     tty: true
     volumes:
       - ./dsrnngan/:/app/dsrnngan
-      - ./setup.py:/app/setup.py
-      - ./setup.cfg:/app/setup.cfg
+      # - ./setup.py:/app/setup.py
+      # - ./setup.cfg:/app/setup.cfg
       - ./.vscode/:/app/.vscode
       - /mnt/RML-DC019/LiveData/Jupiter/2023/ERA5:/app/data/ERA5_raw
     deploy:
@@ -21,9 +21,9 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
     ports:
       - "$TENSORBOARD_PORT:${TENSORBOARD_PORT:-6006}"
       #- "$JUPYTER_PORT:$JUPYTER_PORT" # Uncomment if using Jupyter via a browser
     env_file:
-     - ./.env
+      - ./.env
