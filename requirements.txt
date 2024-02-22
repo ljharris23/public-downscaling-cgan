@@ -1,1 +1,17 @@
 numpy
+numba1
+matplotlib
+seaborn
+cartopy
+jupyter
+xarray
+pandas
+netcdf4
+h5netcdf
+scikit-learn
+cfgrib
+dask
+tqdm
+properscoring
+climlab
+iris
