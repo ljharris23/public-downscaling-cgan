@@ -24,8 +24,8 @@ RUN pip install -r /app/requirements-test.txt
 RUN pip install tensorflow-io
 RUN pip uninstall -y tensorflow-io
 
-# Copy the code and other relevent folders
-COPY /code /app/code
-COPY /.vscode /app/.vscode
+# # Copy the code and other relevent folders
+# COPY /code /app/code
+# COPY /.vscode /app/.vscode
 
 ENV PYTHONPATH="${PYTHONPATH}:/app"
