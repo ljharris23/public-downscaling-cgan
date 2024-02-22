@@ -2,7 +2,7 @@ version: '3'
 
 services:
   app:
-    container_name: events-deep-learning-app-${CONTAINER_NAME_SUFFIX}
+    container_name: public-downscaling-cgan-app-${CONTAINER_NAME_SUFFIX}
     build:
       context: .
       dockerfile: Dockerfile.gpu
@@ -10,7 +10,7 @@ services:
         - PIP_EXTRA_INDEX_URL
     tty: true
     volumes:
-      - ./code/:/app/code
+      - ./dsrnngan/:/app/dsrnngan
       - ./setup.py:/app/setup.py
       - ./setup.cfg:/app/setup.cfg
       - ./.vscode/:/app/.vscode
