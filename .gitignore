@@ -5,6 +5,7 @@ test-logs/
 *.pdf
 *.sh
 *.yaml
+rui_costa_test.py
 
 
 # Byte-compiled / optimized / DLL files
